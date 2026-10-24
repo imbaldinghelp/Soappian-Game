@@ -1,6 +1,6 @@
 // screens.js - everything drawn on top of the world, and the scripted scenes: the title screen,
 // the intro cutscene (the pump soap shoves the soap off the sink into the dustbin), the HUD,
-// the checkpoint banner, the taunts, the pause menu and the win screen. All coordinates are art pixels
+// the taunts, the pause menu and the win screen. All coordinates are art pixels
 // (LOW_W x LOW_H, 320 x 180).
 
 // Panels and buttons (art pixels). main.js tests clicks against the buttons.
@@ -10,8 +10,8 @@ const RESTART_BTN = { x: LOW_W - 52, y: 3, w: 48, h: 13 };
 const SOUND_BTN = { x: LOW_W - 69, y: 3, w: 14, h: 13 };
 const TITLE_SOUND_BTN = { x: LOW_W - 18, y: 4, w: 14, h: 13 };
 const WIN_BTN = { x: Math.round(LOW_W / 2) - 68, y: Math.round((LOW_H - WIN_PANEL.h) / 2) + 116, w: 136, h: 22 };
-const RESUME_BTN = { x: Math.round(LOW_W / 2) - 65, y: 76, w: 130, h: 22 };
-const MENU_BTN = { x: Math.round(LOW_W / 2) - 65, y: 106, w: 130, h: 22 };
+const RESUME_BTN = { x: Math.round(LOW_W / 2) - 65, y: 24, w: 130, h: 20 };
+const MENU_BTN = { x: Math.round(LOW_W / 2) - 65, y: 130, w: 130, h: 20 };
 
 function inRect(x, y, r) { return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h; }
 function hovering(input, r) { return inRect(input.hx / SCALE_UP, input.hy / SCALE_UP, r); }
@@ -66,6 +66,7 @@ function drawLogo(text, cx, y, size, t) {
 // ---------- title screen: a calm evening bathroom, the soap in the bin, the pump soap on the sink ----------
 const TITLE_SKY = ['#7d97dc', '#6c84cc', '#a3b8ee', '#5a70b8'];          // same colours as the towel rack zone
 const TITLE_TAUNTS = TAUNTS.filter(function (s) { return s.length <= 22; });   // short ones fit beside the logo
+const TITLE_BIN = { light: '#e0f7f0', cap: '#b5e6d8', body: '#93cfc0', edge: '#3e6b68' };   // a mint bin (just scenery here)
 
 function drawTitleScene(t) {
   const gy = LOW_H - 30;                                                  // top of the floor
@@ -83,10 +84,10 @@ function drawTitleScene(t) {
   R(0, gy + 1, LOW_W, 1, fl.light); R(0, gy + 2, LOW_W, 2, fl.cap); R(0, gy + 4, LOW_W, 1, fl.band);
 
   // the dustbin, with our soap peeking out and glaring at the pump soap
-  const pl = SURFACES.plastic, bx = 22, peek = Math.round(Math.sin(t * 2) * 1.5), look = Math.floor(t) % 4 === 0 ? 0 : 1;
+  const pl = TITLE_BIN, bx = 22, peek = Math.round(Math.sin(t * 2) * 1.5), look = Math.floor(t) % 4 === 0 ? 0 : 1;
   R(bx, gy - 50, 6, 24, pl.edge); R(bx + 1, gy - 49, 4, 22, pl.cap);    // open lid, standing up behind
-  drawSoapSprite(bx + 10, gy - 40 + peek, 24, 16, 0, 'angry', look, 0);   // determined
-  R(bx, gy - 26, 44, 27, pl.edge); fillPat(bodyPattern('plastic'), bx + 1, gy - 25, 42, 25);
+  drawSoapSprite(bx + 14, gy - 37 + peek, 16, 12, 0, 'angry', look, 0);   // determined
+  R(bx, gy - 26, 44, 27, pl.edge); R(bx + 1, gy - 25, 42, 25, pl.body);
   R(bx - 2, gy - 29, 48, 4, pl.edge); R(bx - 1, gy - 28, 46, 1, pl.light); R(bx - 1, gy - 27, 46, 1, pl.cap);
   drawTextC('BIN', bx + 22, gy - 16, 1, pl.edge, true);
 
@@ -191,18 +192,13 @@ function drawHud(game, input) {
   drawSoundButton(SOUND_BTN);
   drawButton(RESTART_BTN, 'RESTART', 1, hovering(input, RESTART_BTN));
 
-  // height bar: one coloured segment per zone, a flag on each checkpoint reached
+  // height bar: one coloured segment per zone, lit once reached
   const bx = LOW_W - 12, top = 24, bot = LOW_H - 8, bh = bot - top;
   R(bx - 1, top - 1, 7, bh + 2, PAL.ink);
   LEVEL.zones.forEach(function (z, i) {
     const yTop = top + Math.round((z.top / WORLD_H) * bh), yBot = top + Math.round((z.bottom / WORLD_H) * bh);
     R(bx, yTop, 5, yBot - yTop, game.maxZone >= i ? z.bg[0] : PAL.deepnavy);
     R(bx, yTop, 5, 1, PAL.ink);
-    if (i > 0) {
-      const lit = game.maxZone >= i;
-      R(bx - 4, yBot - 6, 1, 6, lit ? PAL.silver : PAL.slate);
-      R(bx - 3, yBot - 6, 3, 2, lit ? PAL.lime : PAL.slate);
-    }
   });
   const s = game.soap;
   const dotY = top + Math.round(((s.y + s.h / 2) / WORLD_H) * bh);
@@ -212,19 +208,8 @@ function drawHud(game, input) {
 
   if (game.state === 'play' && game.shots === 0) {                      // first-shot hint
     const msg = input.aiming ? 'LET GO WHEN THE METER IS HIGH' : 'PRESS AND DRAG BACK TO AIM';
-    const w = textWidth(msg, 1) + 10, x = Math.round((LOW_W - w) / 2);
+    const w = textWidth(msg, 1) + 10, x = LOW_W - 18 - w;                // right side: clear of the board over the bin
     box(x, 22, w, 13, PAL.deepnavy); drawText(msg, x + 5, 25, 1, PAL.cream);
-  }
-
-  if (game.checkpointT > 0) {                                            // checkpoint banner
-    const k = game.checkpointT / CHECKPOINT_TIME, slide = Math.round(Math.max(0, k - 0.85) / 0.15 * -30);
-    const z = LEVEL.zones[game.maxZone], name = (game.maxZone + 1) + '  ' + z.name;
-    const w = Math.max(textWidth('CHECKPOINT!', 2), textWidth(name, 1)) + 20, x = Math.round((LOW_W - w) / 2), y = 46 + slide;
-    if (k > 0.12 || Math.floor(now() * 10) % 2) {
-      R(x + 2, y + 2, w, 30, PAL.ink); box(x, y, w, 30, PAL.deepnavy); R(x + 1, y + 1, w - 2, 1, z.bg[2]);
-      drawTextC('CHECKPOINT!', LOW_W / 2, y + 4, 2, PAL.yellow);
-      drawTextC(name, LOW_W / 2, y + 20, 1, PAL.white);
-    }
   }
 
   if (game.tauntT > 0) {                                                 // taunt from the pump soap, up top, clear of the soap
@@ -252,13 +237,14 @@ function drawWin(game, input) {
   drawButton(WIN_BTN, 'PLAY AGAIN', 2, hovering(input, WIN_BTN));
 }
 
-// Esc menu: the world stays frozen behind a dark see-through layer.
+// Esc menu: the world stays frozen behind a dark see-through layer. The surface guide sits between the buttons.
 function drawPause(input) {
   L.globalAlpha = 0.6; R(0, 0, LOW_W, LOW_H, PAL.ink); L.globalAlpha = 1;
-  drawTextC('PAUSED', LOW_W / 2, 40, 3, PAL.yellow);
+  drawTextC('PAUSED', LOW_W / 2, 7, 2, PAL.yellow);
   drawButton(RESUME_BTN, 'RESUME', 2, hovering(input, RESUME_BTN));
+  drawSurfaceGuide(Math.round((LOW_W - GUIDE_W) / 2), RESUME_BTN.y + RESUME_BTN.h + 8);
   drawButton(MENU_BTN, 'TITLE MENU', 2, hovering(input, MENU_BTN));
-  drawTextC('ESC TO RESUME', LOW_W / 2, 142, 1, PAL.silver);
+  drawTextC('ESC TO RESUME', LOW_W / 2, 163, 1, PAL.silver);
 }
 
 // Everything drawn over the world, by game state.

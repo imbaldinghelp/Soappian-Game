@@ -4,9 +4,13 @@ The game is 8-bit: it draws on a 320 x 180 pixel grid, shown 4x (1280 x 720). Si
 The look is soft and gentle: use the pastel colours in PAL and SURFACES (js/config.js), coloured
 outlines rather than black, calm backgrounds. No anti-aliasing, no blur.
 
-soap.png           24 x 16     the soap (squashes and stretches in code)
-pump_soap.png      24 x 40     the rival
-tile_floor.png     16 x 16     tiles seamlessly (platforms are whole tiles on a 16 px grid). Dry floor tiles
+soap.png           16 x 12     the soap (squashes and stretches in code)
+pump_soap.png      24 x 40     the rival. Rows 0 to 10 are the pump head, 11 to 39 the bottle: they come
+                               apart into a ragdoll when it is knocked over
+tile_floor.png     16 x 16     tiles seamlessly. Ledges are half a tile thick and show the top 8 rows.
+                               Keep each tile in its kind's colour: grip pink (towel, paper), normal sand
+                               (floor, plastic), slide silver (metal, ceramic, seat), ice blue (wet, mirror),
+                               bouncy coral (wall). Dry floor tiles
 tile_plastic.png   16 x 16     bin, basket, cup
 tile_paper.png     16 x 16     tissue box, toilet rolls
 tile_wet.png       16 x 16
@@ -24,8 +28,8 @@ bg_sink.png
 title.png          320 x 180   title screen backdrop (the logo and START button are drawn on top)
 
 Sounds (set USE_SOUND_FILES = true in js/config.js; WAV, OGG or MP3, names in SOUND_FILES):
-sfx_jump.wav  sfx_land.wav  sfx_checkpoint.wav  sfx_fall.wav  sfx_win.wav
-sfx_click.wav  sfx_push.wav  sfx_whistle.wav  sfx_clang.wav
+sfx_jump.wav  sfx_land.wav  sfx_fall.wav  sfx_win.wav
+sfx_click.wav  sfx_push.wav  sfx_whistle.wav  sfx_clang.wav  sfx_bounce.wav  sfx_bonk.wav
 Missing sound files keep the synthesised placeholder.
 
 Do not use any AI image features, including generative fill. The jam disqualifies AI-made art.

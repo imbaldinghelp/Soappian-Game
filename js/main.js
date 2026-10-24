@@ -174,10 +174,16 @@ function handleEvents() {
       fxBurst(d.surface === 'wet' || d.surface === 'mirror' ? 'drop' : 'dust', d.x, d.y, 3 + Math.round(k * 8),
         d.surface === 'wet' || d.surface === 'mirror' ? PAL.sky : PAL.silver);
       if (k > 0.7) fxShake(0.12);
-    } else if (ev.type === 'checkpoint') {
-      playSound('checkpoint');
-      const fy = LEVEL.zones[d.zone].bottom - FLOOR_T;
-      for (let x = game.cam.x; x < game.cam.x + VIEW_WORLD_W; x += 120) fxBurst('spark', x + 60, fy, 2, PAL.yellow);
+    } else if (ev.type === 'bounce') {                               // ricochet off a wall, a side or a bumper
+      const k = Math.min(1, d.speed / MAX_SPEED);
+      playSound('bounce', k);
+      fxBurst('spark', d.x, d.y, 3 + Math.round(k * 6), SURFACES.wall.cap);
+      fxBurst('dust', d.x, d.y, 2 + Math.round(k * 4), PAL.white);
+      fxShake(0.06 + 0.08 * k);
+    } else if (ev.type === 'bonk') {                                 // the flung pump soap hits something
+      const k = Math.min(1, d.speed / 2500);
+      playSound('bonk', k);
+      fxBurst('dust', d.x, d.y, 2 + Math.round(k * 5), PAL.silver);
     } else if (ev.type === 'fall') {
       playSound('fall');
       fxBurst('dust', game.soap.x + game.soap.w / 2, game.soap.y + game.soap.h, 10, PAL.brown);
@@ -198,7 +204,6 @@ function update(dt) {
     return;
   }
   if (game.tauntT > 0) game.tauntT -= dt;
-  if (game.checkpointT > 0) game.checkpointT -= dt;
 
   if (game.state === 'intro') {
     if (updateIntro(game, dt)) startGame();
@@ -210,16 +215,17 @@ function update(dt) {
     physicsFrame(game, dt);
     if (game.state === 'play') updateQueuedShot(dt);
   }
+  if (game.state === 'winning' || game.state === 'won') updateRagdoll(game, dt);   // the pump soap tumbles on
   if (game.state === 'winning') {
     game.winT += dt;
-    if (game.winT > 2.4) { game.state = 'won'; input.aiming = false; }   // after the pump has gone down the chute
+    if (game.winT > WIN_WATCH) { game.state = 'won'; input.aiming = false; }
   }
   handleEvents();
   fxUpdate(game, dt);
   setWind(FX.wind);
 
   const t = cameraTarget();
-  const k = 1 - Math.exp(-6 * dt);                                   // smooth follow
+  const k = 1 - Math.exp(-CAMERA_FOLLOW * dt);                       // smooth follow
   game.cam.x += (t.x - game.cam.x) * k;
   game.cam.y += (t.y - game.cam.y) * k;
 }

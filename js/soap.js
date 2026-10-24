@@ -1,6 +1,6 @@
 // soap.js - the soap and the rules around it: movement, collisions, friction, squeeze meter,
-// launch, checkpoint floors, falls and winning. No drawing and no browser code in here.
-// Things the player should hear or see (a launch, a landing, a checkpoint) are pushed onto
+// launch, falls and winning. No drawing and no browser code in here.
+// Things the player should hear or see (a launch, a landing, a ricochet) are pushed onto
 // game.events; main.js turns them into sounds and effects.
 
 function newGame() {
@@ -13,8 +13,8 @@ function newGame() {
     falls: 0, shots: 0, time: 0,
     maxZone: 0, lastY: LEVEL.start.y - SOAP_H,
     taunt: '', tauntT: 0, lastTaunt: -1,
-    checkpointT: 0,
     winT: 0,
+    rag: null,                       // the beaten pump soap, tumbling (see knockPump)
     events: [],
     cam: { x: 0, y: 0 },
   };
@@ -22,7 +22,7 @@ function newGame() {
 
 function makeSoap(cx, bottom) {
   return { x: cx - SOAP_W / 2, y: bottom - SOAP_H, w: SOAP_W, h: SOAP_H,
-           vx: 0, vy: 0, ground: null, hopped: false, restT: 0, still: false, airT: 0, wasAir: true, canAim: false, sq: 0, impact: 0 };
+           vx: 0, vy: 0, ground: null, hopped: false, bump: null, restT: 0, still: false, airT: 0, wasAir: true, canAim: false, sq: 0, impact: 0 };
 }
 
 // Queue something for main.js to play or show. Capped so the level checker (which never reads it) stays small.
@@ -32,6 +32,12 @@ function emit(game, type, data) {
 
 function overlaps(a, b) {
   return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+}
+
+// A ricochet: remember the hardest one this frame, physicsFrame reports it.
+function noteBump(s, speed, x, y) {
+  if (speed < BOUNCE_FX_MIN) return;
+  if (!s.bump || speed > s.bump.speed) s.bump = { speed: speed, x: x, y: y };
 }
 
 // One small physics step. Order: gravity, ground friction and push, move in x, move in y.
@@ -47,25 +53,28 @@ function stepSoap(s, solids, dt) {
   s.x += s.vx * dt;
   for (let i = 0; i < solids.length; i++) {
     const b = solids[i];
-    if (!b.on || !overlaps(s, b)) continue;
+    if (!overlaps(s, b)) continue;
     s.x = s.vx > 0 ? b.x - s.w : b.x + b.w;
-    s.vx = -s.vx * SURFACES[b.surface].bounce;                  // wall bounce
+    noteBump(s, Math.abs(s.vx), s.vx > 0 ? s.x + s.w : s.x, s.y + s.h / 2);
+    s.vx = -s.vx * Math.max(SIDE_BOUNCE, SURFACES[b.surface].bounce);   // every side ricochets
   }
 
   s.y += s.vy * dt;
   for (let i = 0; i < solids.length; i++) {
     const b = solids[i];
-    if (!b.on || !overlaps(s, b)) continue;
-    const bounce = SURFACES[b.surface].bounce;
+    if (!overlaps(s, b)) continue;
+    const bounce = SURFACES[b.surface].bounce, bouncy = SURFACES[b.surface].kind === 'bouncy';
     if (s.vy >= 0) {                                            // landing
       s.y = b.y - s.h;
       s.impact = Math.max(s.impact, s.vy);
-      const up = -Math.min(HOP_MAX, s.vy * bounce);
+      if (bouncy) noteBump(s, s.vy, s.x + s.w / 2, s.y + s.h);
+      const up = -Math.min(bouncy ? Infinity : HOP_MAX, s.vy * bounce);
       if (s.vy > LAND_ABSORB) s.sq = Math.min(0.35, s.vy / 3000);
       if (s.vy > LAND_ABSORB && up < -40) { s.vy = up; s.hopped = true; }   // small hop on a hard landing
       else { s.vy = 0; s.ground = b; }
     } else {                                                    // bumped a ceiling
       s.y = b.y + b.h;
+      if (bouncy) noteBump(s, -s.vy, s.x + s.w / 2, s.y);
       s.vy = -s.vy * bounce;
     }
   }
@@ -83,6 +92,11 @@ function zoneIndex(y) {
 function physicsFrame(game, dt) {
   const s = game.soap;
   for (let i = 0; i < SUBSTEPS; i++) stepSoap(s, game.solids, dt / SUBSTEPS);
+  if (s.bump) {                                                 // ricochet: squish and tell main.js
+    s.sq = -0.3;
+    emit(game, 'bounce', s.bump);
+    s.bump = null;
+  }
   if (s.sq > 0) s.sq = Math.max(0, s.sq - 2.5 * dt);
   if (s.sq < 0) s.sq = Math.min(0, s.sq + 2.5 * dt);
 
@@ -104,9 +118,86 @@ function physicsFrame(game, dt) {
   if (s.ground && s.wasAir) onLand(game);
   s.wasAir = !s.ground;
 
-  if (game.state === 'play' && overlaps(s, game.pump)) {        // knocked it: the soap stops dead and watches
-    game.state = 'winning'; game.winT = 0; s.vx = 0;
+  if (game.state === 'play' && overlaps(s, game.pump)) {        // knocked it: the pump soap goes flying, the soap watches
+    game.state = 'winning'; game.winT = 0;
+    knockPump(game);
+    s.vx = 0;
     emit(game, 'win');
+  }
+}
+
+// ---------- the beaten pump soap: a floppy ragdoll ----------
+// Two pieces, the bottle and the pump head, each a spinning disc for collisions, held together at the neck
+// by a stretchy joint. Verlet style: a piece's speed is how far it moved last step.
+const RAG_STEPS = 4;                      // physics steps per frame for the ragdoll
+const RAG_PIECES = {                      // in art pixels, from the top-left of the 24 x 40 sprite
+  head: { top: 0, h: 11, neck: { x: 11, y: 11 }, mass: 1 },
+  bottle: { top: 11, h: 29, neck: { x: 11, y: 11 }, mass: 3 },
+};
+
+function knockPump(game) {
+  const s = game.soap, p = game.pump;
+  const dir = s.vx < -1 ? -1 : s.vx > 1 ? 1 : (s.x + s.w / 2 < p.x + p.w / 2 ? 1 : -1);   // away from the soap
+  const vx = dir * (RAG_FLING + 0.5 * Math.hypot(s.vx, s.vy)), vy = -RAG_FLING_UP, dt = DT / RAG_STEPS;
+  const parts = {};
+  Object.keys(RAG_PIECES).forEach(function (k) {
+    const pc = RAG_PIECES[k], w = p.w, h = pc.h * PIXEL;
+    const x = p.x + w / 2, y = p.y + pc.top * PIXEL + h / 2;
+    const kick = k === 'head' ? { x: dir * 250, y: -300, spin: -0.6 } : { x: 0, y: 0, spin: 1 };   // the head lags, floppily
+    const v = { x: vx + kick.x, y: vy + kick.y }, spin = dir * RAG_SPIN * kick.spin;
+    parts[k] = { x: x, y: y, px: x - v.x * dt, py: y - v.y * dt, a: 0, pa: -spin * dt, w: w, h: h,
+                 r: Math.min(w, h) / 2, neck: { x: (pc.neck.x - 12) * PIXEL, y: (pc.neck.y - pc.top) * PIXEL - h / 2 },
+                 mass: pc.mass, bonkT: 0 };
+  });
+  game.rag = parts;
+}
+
+function rotated(pt, a) { return { x: pt.x * Math.cos(a) - pt.y * Math.sin(a), y: pt.x * Math.sin(a) + pt.y * Math.cos(a) }; }
+
+// One piece against every solid: push out, bounce, and turn sliding into spin.
+function ragCollide(game, q) {
+  for (const b of game.solids) {
+    const cx = Math.max(b.x, Math.min(q.x, b.x + b.w)), cy = Math.max(b.y, Math.min(q.y, b.y + b.h));
+    let dx = q.x - cx, dy = q.y - cy, d = Math.hypot(dx, dy);
+    if (d >= q.r) continue;
+    if (d === 0) { dx = 0; dy = -1; d = 1; }                    // centre inside a block: pop out upward
+    const nx = dx / d, ny = dy / d, vx = q.x - q.px, vy = q.y - q.py;
+    q.x += nx * (q.r - d); q.y += ny * (q.r - d);
+    const vn = vx * nx + vy * ny;
+    if (vn >= 0) { q.px = q.x - vx; q.py = q.y - vy; continue; }
+    const tx = vx - vn * nx, ty = vy - vn * ny;                 // the sliding part of the motion
+    const out = -vn * RAG_BOUNCE;
+    q.px = q.x - (tx * 0.8 + nx * out); q.py = q.y - (ty * 0.8 + ny * out);
+    q.pa = q.a - ((q.a - q.pa) * 0.5 + (ty * nx - tx * ny) / q.r * 0.5);   // rolls along what it hit
+    const speed = -vn * RAG_STEPS / DT;
+    if (speed > 250 && q.bonkT <= 0) { emit(game, 'bonk', { speed: speed, x: q.x, y: q.y }); q.bonkT = 0.1; }
+  }
+}
+
+// Moves the ragdoll by one frame. Runs while the win plays out.
+function updateRagdoll(game, dt) {
+  const rag = game.rag;
+  if (!rag) return;
+  const h = dt / RAG_STEPS, g = RAG_GRAVITY * h * h;
+  for (let n = 0; n < RAG_STEPS; n++) {
+    for (const k in rag) {
+      const q = rag[k];
+      const vx = q.x - q.px, vy = q.y - q.py;
+      q.px = q.x; q.py = q.y;
+      q.x += vx; q.y += vy + g;
+      const va = (q.a - q.pa) * 0.998;
+      q.pa = q.a; q.a += va;
+      q.bonkT -= h;
+      ragCollide(game, q);
+    }
+    for (let it = 0; it < 3; it++) {                             // the neck joint pulls the two pieces together
+      const A = rag.bottle, B = rag.head;
+      const na = rotated(A.neck, A.a), nb = rotated(B.neck, B.a);
+      const dx = (B.x + nb.x) - (A.x + na.x), dy = (B.y + nb.y) - (A.y + na.y), m = A.mass + B.mass;
+      A.x += dx * B.mass / m; A.y += dy * B.mass / m;
+      B.x -= dx * A.mass / m; B.y -= dy * A.mass / m;
+    }
+    rag.head.a += (rag.bottle.a - rag.head.a) * 0.08;           // the head flops after the bottle
   }
 }
 
@@ -116,18 +207,7 @@ function onLand(game) {
   const z = zoneIndex(s.y + s.h / 2);
   emit(game, 'land', { speed: s.impact, surface: s.ground.surface, x: s.x + s.w / 2, y: s.y + s.h });
   s.impact = 0;
-  if (z > game.maxZone) {
-    game.maxZone = z;
-    game.checkpointT = CHECKPOINT_TIME;
-    emit(game, 'checkpoint', { zone: z });
-  }
-
-  // Soft floors: switch on the floor ledge of this zone and the ones below, if the soap is above it.
-  if (ZONE_FLOORS) {
-    for (const b of game.solids) {
-      if (b.floor && b.floor <= z && !b.on && s.y + s.h <= b.y + 1) b.on = true;
-    }
-  }
+  game.maxZone = Math.max(game.maxZone, z);                     // highest zone reached (the height bar shows it)
 
   // A fall: this landing is much lower than the last one.
   if (s.y - game.lastY > FALL_MIN_DROP) {

@@ -90,10 +90,6 @@ const SYNTH = {
     else if (surface === 'metal') tone('square', 1900, 1700, 0.05, v * 0.25);                      // tink
     else hiss('lowpass', 1200, 1, 0.05, v * 0.6);
   },
-  checkpoint: function () {                              // bubbly arpeggio
-    [523, 659, 784, 1047].forEach(function (f, i) { tone('square', f, f, 0.09, 0.09, i * 0.07); });
-    tone('triangle', 1047, 2093, 0.25, 0.12, 0.28);
-  },
   fall: function () {                                    // sad trombone, short
     tone('triangle', 392, 370, 0.18, 0.18);
     tone('triangle', 349, 330, 0.18, 0.18, 0.2);
@@ -106,6 +102,15 @@ const SYNTH = {
   click: function () { tone('square', 880, 1320, 0.04, 0.1); },
   push: function () { hiss('bandpass', 400, 1, 0.9, 0.18, 0, 1400); },
   whistle: function () { tone('sine', 1500, 260, 1.6, 0.12); },
+  bounce: function (p) {                                 // rubbery boing off a bumper
+    tone('sine', 220 + 120 * p, 620 + 300 * p, 0.12, 0.25 + 0.2 * p);
+    tone('triangle', 900, 500, 0.08, 0.1 * p, 0.02);
+    hiss('bandpass', 1800, 2, 0.04, 0.15 + 0.15 * p);
+  },
+  bonk: function (p) {                                   // hollow plastic bottle bonk
+    tone('square', 260 + 80 * Math.random(), 140, 0.09, 0.08 + 0.14 * p);
+    hiss('lowpass', 700, 1, 0.06, 0.2 + 0.2 * p);
+  },
   clang: function () {
     [330, 513, 789, 1121].forEach(function (f) { tone('triangle', f, f * 0.98, 0.7, 0.12); });
     hiss('lowpass', 900, 1, 0.12, 0.4);
@@ -143,7 +148,7 @@ function playSound(name, strength, surface) {
     src.buffer = buf;
     if (name === 'jump') src.playbackRate.value = 0.85 + 0.4 * (strength || 0);   // higher pitch for harder shots
     const g = AUDIO.ctx.createGain();
-    g.gain.value = name === 'land' ? 0.3 + 0.7 * (strength || 0) : 1;
+    g.gain.value = name === 'land' || name === 'bounce' || name === 'bonk' ? 0.3 + 0.7 * (strength || 0) : 1;
     src.connect(g); g.connect(AUDIO.master);
     src.start();
     return;

@@ -6,11 +6,26 @@
 const low = document.getElementById('game');
 low.width = LOW_W;
 low.height = LOW_H;
-const L = low.getContext('2d');
+let L = low.getContext('2d');             // what R() and friends draw on (spriteOf points it elsewhere for a moment)
 L.imageSmoothingEnabled = false;
 
 const IMAGES = {};
 const PATTERNS = {};
+const SPRITES = {};
+
+// A small picture drawn once with the normal drawing helpers and kept, so it can be turned (the ragdoll).
+function spriteOf(key, w, h, paint) {
+  if (!SPRITES[key]) {
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const keep = L;
+    L = c.getContext('2d');
+    paint();
+    L = keep;
+    SPRITES[key] = c;
+  }
+  return SPRITES[key];
+}
 
 function loadArt() {
   if (!USE_ART) return;
@@ -150,12 +165,13 @@ function drawBlock(b) {
   if (capH > 1) R(x, y + 1, iw, capH - 1, sf.cap);
   if (ih > capH + 1) R(x, y + capH, iw, 1, sf.band);
 
-  // Reading the surface: grippy tops are fuzzy (little tufts), slippery tops are shiny (dashes and a glint).
-  if (b.surface === 'wall') {                           // rubber bumper: two bolts
+  // Reading the surface: the colour is the kind (see KINDS). On top of that, grippy tops are fuzzy
+  // (little tufts), normal tops are plain, slippery tops are shiny (dashes and a glint).
+  if (sf.kind === 'bouncy') {                           // rubber bumper: two bolts
     if (iw > 3 && ih > 3) { R(x + 1, y + 2, 1, 1, sf.light); R(x + iw - 2, y + ih - 2, 1, 1, sf.band); }
   } else if (sf.friction >= GRIP_FRICTION) {
     for (let i = 1 + (x0 % 3); i < iw - 1; i += 4) { R(x + i, y0 - 1, 2, 1, sf.edge); R(x + i, y0, 2, 1, sf.cap); }
-  } else if (iw > 6) {
+  } else if (sf.friction <= SLIP_FRICTION && iw > 6) {
     for (let i = 2 + (x0 % 5); i < iw - 4; i += 9) R(x + i, y + 1, 4, 1, sf.light);
     const g = Math.floor((now() * 40 + x0 * 7) % (iw + 60)) - 30;     // a glint sliding along now and then
     if (g >= 0 && g < iw - 2) { R(x + g, y, 3, 2, '#ffffff'); R(x + g + 1, y0 - 1, 1, 1, '#ffffff'); }
@@ -205,6 +221,29 @@ function drawAmbient(camX, camY) {
     R(x, y, 2, 2, PAL.cream);
     if (on) { R(x - 1, y, 4, 2, PAL.cream); R(x, y - 1, 2, 4, PAL.cream); R(x, y, 2, 2, PAL.white); }
   }
+}
+
+// ---------- the surface guide: each kind, how slippery, and the zone where it first turns up ----------
+// On the board above the bin and in the Esc menu. (x0, y0) is its top-left, in art pixels.
+const GUIDE_W = 108, GUIDE_H = 16 + Object.keys(KINDS).length * 10;
+function drawSurfaceGuide(x0, y0) {
+  const first = firstZones();
+  R(x0 + 2, y0 + 2, GUIDE_W, GUIDE_H, PAL.ink); box(x0, y0, GUIDE_W, GUIDE_H, PAL.deepnavy); R(x0 + 1, y0 + 1, GUIDE_W - 2, 1, PAL.lilac);
+  drawTextC('HOW SLIPPERY?', x0 + GUIDE_W / 2, y0 + 4, 1, PAL.yellow);
+  Object.keys(KINDS).forEach(function (k, i) {
+    const kd = KINDS[k], ry = y0 + 15 + i * 10;
+    R(x0 + 5, ry, 14, 7, kd.edge); R(x0 + 6, ry + 1, 12, 5, kd.body);      // a little ledge in that colour
+    R(x0 + 6, ry + 1, 12, 1, kd.light); R(x0 + 6, ry + 2, 12, 1, kd.cap);
+    if (kd.friction >= GRIP_FRICTION) for (let t = 1; t < 12; t += 3) R(x0 + 6 + t, ry - 1, 1, 1, kd.cap);
+    else if (kd.friction <= SLIP_FRICTION && k !== 'bouncy') R(x0 + 9, ry + 1, 3, 1, '#ffffff');
+    drawText(kd.name, x0 + 23, ry, 1, PAL.white);
+    if (k === 'bouncy') drawText('BOING', x0 + 62, ry, 1, kd.cap);
+    else {
+      const n = Math.max(1, Math.min(5, Math.round((1 - kd.friction) * 5)));   // pips: how slippery
+      for (let j = 0; j < 5; j++) R(x0 + 62 + j * 5, ry + 1, 4, 5, j < n ? kd.body : PAL.navy);
+    }
+    drawText('Z' + (first[k] + 1), x0 + 95, ry, 1, first[k] ? PAL.silver : PAL.lime);
+  });
 }
 
 // ---------- scenery (no collision). x = centre, y = the surface it stands on, in art pixels ----------
@@ -274,6 +313,7 @@ const DECO = {
     R(x0 + Math.round(d.w / 2) - 1, top + 2, 2, d.h - 4, d.bg[2]); R(x0 + 2, top + Math.round(d.h / 2), d.w - 4, 2, d.bg[2]);
     R(x0 - 2, y - 1, d.w + 4, 2, d.bg[2]);
   },
+  board: function (x, y) { drawSurfaceGuide(Math.round(x - GUIDE_W / 2), y - GUIDE_H); },   // the guide, on the wall
   hook: function (x, y) { R(x - 1, y - 8, 3, 3, PAL.silver); R(x, y - 5, 1, 4, PAL.silver); R(x - 1, y - 2, 1, 1, PAL.silver); },
   bracket: function (x, y) { R(x - 1, y - 3, 3, 9, PAL.ink); R(x, y - 2, 1, 7, PAL.silver); },
   toothbrush: function (x, y) {
@@ -295,7 +335,20 @@ const DECO = {
 };
 
 // Big props on the wall are drawn before the platforms; small ones stand on the platforms, in front.
-const BACK_DECO = { tub: true, window: true, lid: true, pipe: true, bin: true, basin: true };
+const BACK_DECO = { tub: true, window: true, lid: true, pipe: true, bin: true, basin: true, board: true };
+
+// The zone (0 to 4) where each kind of surface first turns up in the level.
+let FIRST_ZONES = null;
+function firstZones() {
+  if (!FIRST_ZONES) {
+    FIRST_ZONES = {};
+    for (const b of LEVEL.blocks) {
+      const k = SURFACES[b.surface].kind, z = zoneIndex(b.y);
+      if (FIRST_ZONES[k] === undefined || z < FIRST_ZONES[k]) FIRST_ZONES[k] = z;
+    }
+  }
+  return FIRST_ZONES;
+}
 
 function drawDeco(d, vx0, vy0, vx1, vy1) {
   const x = px(d.x), y = px(d.y);
@@ -315,38 +368,39 @@ function drawPumpSprite(x, y, mood) {                                    // 24 x
   R(x + 2, y + 35, 20, 4, PAL.plum);              // shade
   R(x + 3, y + 30, 18, 4, PAL.crimson); R(x + 5, y + 31, 4, 1, PAL.white);   // label stripe
   R(x + 5, y + 17, 5, 5, PAL.white); R(x + 14, y + 17, 5, 5, PAL.white);     // eyes
-  R(x + 7, y + 18, 2, 3, PAL.ink); R(x + 16, y + 18, 2, 3, PAL.ink);          // pupils
+  if (mood === 'ko') {                                                         // knocked silly: X eyes
+    [x + 5, x + 14].forEach(function (ex) { for (let i = 0; i < 5; i++) { R(ex + i, y + 17 + i, 1, 1, PAL.ink); R(ex + 4 - i, y + 17 + i, 1, 1, PAL.ink); } });
+  } else { R(x + 7, y + 18, 2, 3, PAL.ink); R(x + 16, y + 18, 2, 3, PAL.ink); }   // pupils
   if (mood === 'push') {                                                       // angry brows
     R(x + 5, y + 14, 2, 1, PAL.ink); R(x + 7, y + 15, 3, 1, PAL.ink);
     R(x + 17, y + 14, 2, 1, PAL.ink); R(x + 14, y + 15, 3, 1, PAL.ink);
-  } else { R(x + 5, y + 15, 5, 1, PAL.ink); R(x + 14, y + 15, 5, 1, PAL.ink); } // smug brows
-  if (mood === 'talk') { R(x + 10, y + 24, 5, 4, PAL.ink); R(x + 11, y + 27, 3, 1, PAL.pink); }
+  } else if (mood !== 'ko') { R(x + 5, y + 15, 5, 1, PAL.ink); R(x + 14, y + 15, 5, 1, PAL.ink); } // smug brows
+  if (mood === 'talk' || mood === 'ko') { R(x + 10, y + 24, 5, 4, PAL.ink); R(x + 11, y + 27, 3, 1, PAL.pink); }
   else if (mood === 'push') { R(x + 8, y + 25, 8, 3, PAL.white); R(x + 8, y + 26, 8, 1, PAL.ink); }
   else { R(x + 9, y + 26, 7, 1, PAL.ink); R(x + 8, y + 25, 1, 1, PAL.ink); R(x + 16, y + 25, 1, 1, PAL.ink); }   // smirk
 }
 
+// The pump sprite cut into its ragdoll pieces (RAG_PIECES in soap.js), knocked silly.
+function pumpPiece(k) {
+  const pc = RAG_PIECES[k], img = IMAGES.pump, w = px(LEVEL.pump.w);
+  return spriteOf('pump-' + k + (img ? '-art' : ''), w, pc.h, function () {
+    if (img) L.drawImage(img, 0, -pc.top); else drawPumpSprite(0, -pc.top, 'ko');
+  });
+}
+
 function drawPump(game) {
-  if (game.state === 'won') return;
-  const x = px(game.pump.x), y = px(game.pump.y);
-  if (game.state === 'winning') {                 // wobble, topple, slide off the counter, down the chute
-    const t = game.winT, pw = px(LEVEL.pump.w), ph = px(LEVEL.pump.h), half = ph / 2;
-    if (t < 0.3) { drawPumpSprite(x + (Math.floor(t * 30) % 2), y, 'talk'); return; }
-    const u = t - 0.3, top = y + ph;              // top = the counter surface under the pump
-    const lx0 = x + Math.round((pw - ph) / 2) - 6;                  // lying down, toppled to the left
-    let lx = lx0 - Math.round(40 * u + 160 * u * u), ly = top;      // sliding left, faster and faster
-    const edge = px(LEVEL.counterEdge);
-    if (lx + half < edge) {                        // past the end of the counter: fall
-      const tEdge = (-40 + Math.sqrt(1600 + 640 * (lx0 + half - edge))) / 320;
-      const f = Math.max(0, u - tEdge);
-      lx = edge - half - Math.round(30 * f); ly = top + Math.round(180 * f * f);
-    }
-    L.save();
-    L.translate(lx, ly);
-    L.transform(0, -1, 1, 0, 0, 0);               // turned 90 degrees (head to the left), no blur
-    drawPumpSprite(0, 0, 'push');
-    L.restore();
+  if (game.rag) {                                 // flung: draw each piece turned to its angle
+    ['bottle', 'head'].forEach(function (k) {
+      const q = game.rag[k], c = pumpPiece(k);
+      L.save();
+      L.translate(px(q.x), px(q.y));
+      L.rotate(q.a);
+      L.drawImage(c, -Math.round(c.width / 2), -Math.round(c.height / 2));   // smoothing is off: stays pixelly
+      L.restore();
+    });
     return;
   }
+  const x = px(game.pump.x), y = px(game.pump.y);
   const img = IMAGES.pump;
   if (img) L.drawImage(img, x, y); else drawPumpSprite(x, y, game.pumpMood);   // pumpMood is set by the intro
 }
@@ -356,30 +410,29 @@ function drawPump(game) {
 function shownDirt(game) { return DIRT_LOOK ? dirtOf(game) : 0; }
 function soapColor(dirt) { return dirt < 0.25 ? PAL.yellow : dirt < 0.5 ? PAL.orange : dirt < 0.8 ? PAL.brown : PAL.slate; }
 
-// The soap bar, about 24 x 16 pixels with its top-left at (x, y). face: 'smile', 'happy', 'shock', 'angry'
+// The soap bar, about 16 x 12 pixels with its top-left at (x, y). face: 'smile', 'happy', 'shock', 'angry'
 // or 'glum'. (lx, ly) is where the eyes look (-1 to 1). The title screen draws it too.
 function drawSoapSprite(x, y, w, h, dirt, face, lx, ly) {
   roundBox(x, y, w, h, soapColor(dirt));
-  R(x + 4, y + 1, 6, 1, dirt < 0.5 ? PAL.white : PAL.silver);            // shine
-  R(x + 3, y + 2, 2, 1, dirt < 0.5 ? PAL.white : PAL.silver);
+  R(x + 3, y + 1, 4, 1, dirt < 0.5 ? PAL.white : PAL.silver);            // shine
   R(x + 2, y + h - 2, w - 4, 1, dirt < 0.25 ? PAL.orange : PAL.brown);   // shade
-  const ex = [x + 5, x + w - 9], ey = y + 3;
-  const mx = x + Math.floor(w / 2) - 3, my = y + h - 6;
+  const ex = [x + 3, x + w - 6], ey = y + 2;
+  const mx = x + Math.floor(w / 2) - 2, my = y + h - 5;
   for (let i = 0; i < 2; i++) {
-    if (face === 'happy') { R(ex[i], ey + 3, 1, 1, PAL.ink); R(ex[i] + 1, ey + 2, 2, 1, PAL.ink); R(ex[i] + 3, ey + 3, 1, 1, PAL.ink); continue; }
-    R(ex[i], ey, 4, 5, PAL.white);
-    if (face === 'shock') R(ex[i] + 1, ey + 1, 2, 3, PAL.ink);
-    else R(ex[i] + (lx > 0.3 ? 2 : lx < -0.3 ? 0 : 1), ey + (ly > 0.3 ? 2 : ly < -0.3 ? 0 : 1), 2, 3, PAL.ink);
+    if (face === 'happy') { R(ex[i], ey + 2, 1, 1, PAL.ink); R(ex[i] + 1, ey + 1, 1, 1, PAL.ink); R(ex[i] + 2, ey + 2, 1, 1, PAL.ink); continue; }
+    R(ex[i], ey, 3, 4, PAL.white);
+    if (face === 'shock') R(ex[i] + 1, ey + 1, 1, 2, PAL.ink);
+    else R(ex[i] + (lx > 0.3 ? 1 : 0), ey + (ly > 0.3 ? 2 : ly < -0.3 ? 0 : 1), 2, 2, PAL.ink);
   }
   if (face === 'angry') {                                                // brows slope down to the middle
-    R(ex[0], ey - 2, 2, 1, PAL.ink); R(ex[0] + 2, ey - 1, 2, 1, PAL.ink);
-    R(ex[1] + 2, ey - 2, 2, 1, PAL.ink); R(ex[1], ey - 1, 2, 1, PAL.ink);
-    R(mx, my + 1, 6, 1, PAL.ink);
-  } else if (face === 'shock') { R(mx + 1, my - 1, 4, 3, PAL.ink); }
-  else if (face === 'glum') { R(mx, my + 1, 6, 1, PAL.ink); }
-  else { R(mx, my, 1, 1, PAL.ink); R(mx + 1, my + 1, 4, 1, PAL.ink); R(mx + 5, my, 1, 1, PAL.ink); }
-  if (dirt > 0.25) { R(x + 2, y + h - 4, 2, 2, PAL.brown); R(x + w - 6, y + 2, 2, 2, PAL.brown); }
-  if (dirt > 0.6) { R(x + 12, y + h - 4, 2, 1, PAL.slate); }
+    R(ex[0], ey - 1, 2, 1, PAL.ink); R(ex[0] + 2, ey, 1, 1, PAL.ink);
+    R(ex[1] + 1, ey - 1, 2, 1, PAL.ink); R(ex[1], ey, 1, 1, PAL.ink);
+    R(mx, my + 1, 5, 1, PAL.ink);
+  } else if (face === 'shock') { R(mx + 1, my - 1, 3, 3, PAL.ink); }
+  else if (face === 'glum') { R(mx, my + 1, 5, 1, PAL.ink); }
+  else { R(mx, my, 1, 1, PAL.ink); R(mx + 1, my + 1, 3, 1, PAL.ink); R(mx + 4, my, 1, 1, PAL.ink); }
+  if (dirt > 0.25) { R(x + 2, y + h - 4, 2, 2, PAL.brown); R(x + w - 5, y + 2, 2, 2, PAL.brown); }
+  if (dirt > 0.6) { R(x + 8, y + h - 4, 2, 1, PAL.slate); }
 }
 
 // Returns where the soap was drawn (art pixels, world space) so the UI can sit next to it.
@@ -387,8 +440,8 @@ function drawSoapSprite(x, y, w, h, dirt, face, lx, ly) {
 function drawSoap(game, aim) {
   const s = game.soap;
   const dirt = shownDirt(game);
-  const SW = px(SOAP_W), SH = px(SOAP_H);                                // 24 x 16 art pixels
-  const w = SW + Math.round(s.sq * 14), h = SH - Math.round(s.sq * 8);    // squash and stretch
+  const SW = px(SOAP_W), SH = px(SOAP_H);                                // 16 x 12 art pixels
+  const w = SW + Math.round(s.sq * 10), h = SH - Math.round(s.sq * 6);    // squash and stretch
   const cx = px(s.x) + Math.round(SW / 2), bottom = px(s.y + s.h);
   const x = cx - Math.round(w / 2), y = bottom - h;
   const img = IMAGES.soap;
@@ -468,7 +521,6 @@ function drawWorld(game, vx0, vy0, vx1, vy1, aim, camX, camY) {
     const x0 = px(b.x), y0 = px(b.y), x1 = px(b.x + b.w), y1 = px(b.y + b.h);
     if (x1 < vx0 || x0 > vx1 || y1 < vy0 || y0 > vy1) continue;
     if (b.surface === 'wall' && (b.x < 0 || b.x >= WORLD_W || b.y < 0)) continue;   // world edges stay invisible
-    if (!b.on) continue;                                   // checkpoint floor not reached yet: not there
     drawBlock(b);
   }
   for (const d of LEVEL.decor) if (!BACK_DECO[d.kind]) drawDeco(d, vx0, vy0, vx1, vy1);
@@ -515,7 +567,7 @@ function drawAim(input, aim, sx, sy, sp, ready) {
   if (aim) {                                                                    // short dotted aim line
     const len = 16 + 22 * Math.min(1, (aim.len - AIM_MIN_DRAG) / (AIM_MAX_DRAG - AIM_MIN_DRAG));
     const cx = sx + sp.w / 2, cy = sy + sp.h / 2;
-    for (let d = 18; d <= 18 + len; d += 4) {
+    for (let d = 13; d <= 13 + len; d += 4) {
       const ax = Math.round(cx + aim.x * d), ay = Math.round(cy + aim.y * d);
       R(ax - 1, ay - 1, 3, 3, PAL.ink); R(ax, ay, 1, 1, ready ? PAL.white : PAL.slate);
     }
@@ -527,14 +579,14 @@ function drawDebug(game, camX, camY) {
   for (const b of game.solids) {
     const x0 = px(b.x) - camX, y0 = px(b.y) - camY, w = px(b.x + b.w) - px(b.x), h = px(b.y + b.h) - px(b.y);
     if (x0 + w < 0 || x0 > LOW_W || y0 + h < 0 || y0 > LOW_H) continue;
-    outline(x0, y0, w, h, b.on ? PAL.lime : PAL.orange);
+    outline(x0, y0, w, h, PAL.lime);
   }
   outline(px(s.x) - camX, px(s.y) - camY, px(s.x + s.w) - px(s.x), px(s.y + s.h) - px(s.y), PAL.pink);
   const lines = [
     'D OFF  M MAP  R RESTART  1-5 ZONE  SHIFT+CLICK MOVE',
     'POS ' + Math.round(s.x + s.w / 2) + ',' + Math.round(s.y + s.h) + '  SPEED ' + Math.round(s.vx) + ',' + Math.round(s.vy),
     'ON ' + (s.ground ? s.ground.surface + (s.ground.push ? ' PUSH ' + s.ground.push : '') : 'AIR') + '  CAN SHOOT ' + s.canAim + '  ZONE ' + (zoneIndex(s.y + s.h / 2) + 1),
-    'METER ' + game.meter.p.toFixed(2) + '  SHOTS ' + game.shots + '  FLOORS ON ' + game.solids.filter(function (b) { return b.floor && b.on; }).length,
+    'METER ' + game.meter.p.toFixed(2) + '  SHOTS ' + game.shots + '  FALLS ' + game.falls,
   ];
   R(2, 20, 262, 38, PAL.ink);
   lines.forEach(function (l, i) { drawText(l, 4, 22 + i * 9, 1, PAL.lime, true); });

@@ -22,7 +22,7 @@ const MAX_FRAMES = 60 * 25;                                // give up on a shot 
 function makeSim(substeps) {
   let src = SOURCE;
   if (substeps) src = src.replace(/const SUBSTEPS = \d+;/, 'const SUBSTEPS = ' + substeps + ';');
-  const A = vm.runInNewContext(src + '\n({newGame, physicsFrame, launch, LEVEL, SOAP_W, SOAP_H, ZONE_FLOORS})', { Math: Math });
+  const A = vm.runInNewContext(src + '\n({newGame, physicsFrame, launch, LEVEL, SOAP_W, SOAP_H})', { Math: Math });
   const game = A.newGame();
   game.state = 'play';
 
@@ -30,7 +30,6 @@ function makeSim(substeps) {
     const s = game.soap;
     s.x = st.x - A.SOAP_W / 2; s.y = st.y - A.SOAP_H;
     s.vx = 0; s.vy = 0; s.ground = null; s.restT = 0; s.still = false; s.canAim = false; s.airT = 0; s.wasAir = true; s.sq = 0;
-    for (const b of game.solids) if (b.floor) b.on = A.ZONE_FLOORS && b.floor <= st.mz;
     game.maxZone = st.mz; game.lastY = s.y; game.state = 'play';
   }
   function result(startMz) {
@@ -152,7 +151,7 @@ console.log(replayOk ? '\nCheck with the real game settings: OK, the whole seque
 // ---------- platforms never used ----------
 const lonely = [];
 sim.game.solids.forEach(function (b, i) {
-  if (b.floor || b.surface === 'wall' || reachedBlocks.has(i)) return;
+  if (b.surface === 'wall' || reachedBlocks.has(i)) return;
   lonely.push('(' + b.x + ', ' + b.y + ') ' + b.surface);
 });
 if (lonely.length) console.log('\nNever stood on during the search (fine for slopes and decoys, check anything else): ' + lonely.join('; '));
