@@ -165,13 +165,13 @@ function drawBlock(b) {
   if (capH > 1) R(x, y + 1, iw, capH - 1, sf.cap);
   if (ih > capH + 1) R(x, y + capH, iw, 1, sf.band);
 
-  // Reading the surface: the colour is the kind (see KINDS). On top of that, grippy tops are fuzzy
-  // (little tufts), normal tops are plain, slippery tops are shiny (dashes and a glint).
-  if (sf.kind === 'bouncy') {                           // rubber bumper: two bolts
+  // Reading the surface: the colour is the material (see SURFACES). On top of that, grippy tops (1 bar)
+  // are fuzzy, middling ones plain, slippery ones (3 bars and up) shiny, with dashes and a glint.
+  if (b.surface === 'wall') {                           // rubber wall: two bolts
     if (iw > 3 && ih > 3) { R(x + 1, y + 2, 1, 1, sf.light); R(x + iw - 2, y + ih - 2, 1, 1, sf.band); }
-  } else if (sf.friction >= GRIP_FRICTION) {
+  } else if (sf.slip <= 1) {
     for (let i = 1 + (x0 % 3); i < iw - 1; i += 4) { R(x + i, y0 - 1, 2, 1, sf.edge); R(x + i, y0, 2, 1, sf.cap); }
-  } else if (sf.friction <= SLIP_FRICTION && iw > 6) {
+  } else if (sf.slip >= 3 && iw > 6) {
     for (let i = 2 + (x0 % 5); i < iw - 4; i += 9) R(x + i, y + 1, 4, 1, sf.light);
     const g = Math.floor((now() * 40 + x0 * 7) % (iw + 60)) - 30;     // a glint sliding along now and then
     if (g >= 0 && g < iw - 2) { R(x + g, y, 3, 2, '#ffffff'); R(x + g + 1, y0 - 1, 1, 1, '#ffffff'); }
@@ -223,27 +223,35 @@ function drawAmbient(camX, camY) {
   }
 }
 
-// ---------- the surface guide: each kind, how slippery, and the zone where it first turns up ----------
-// On the board above the bin and in the Esc menu. (x0, y0) is its top-left, in art pixels.
-const GUIDE_W = 108, GUIDE_H = 16 + Object.keys(KINDS).length * 10;
+// ---------- the surface manual: each material, how slippery (bars), and the zone where it turns up ----------
+// All of them in the Esc menu; one at a time on a little board where a material first appears.
+const GUIDE_W = 112, GUIDE_H = 16 + MATERIALS.length * 10, SIGN_H = 14;
+
+// One row: a little ledge in the material's colour, its name, its slippery bars (halves too), its zone.
+function drawMaterialRow(x0, ry, key) {
+  const sf = SURFACES[key], z = firstZones()[key];
+  R(x0 + 5, ry, 14, 7, sf.edge); R(x0 + 6, ry + 1, 12, 5, sf.body);
+  R(x0 + 6, ry + 1, 12, 1, sf.light); R(x0 + 6, ry + 2, 12, 1, sf.cap);
+  if (sf.slip <= 1) for (let t = 1; t < 12; t += 3) R(x0 + 6 + t, ry - 1, 1, 1, sf.cap);
+  else if (sf.slip >= 3) R(x0 + 9, ry + 1, 3, 1, '#ffffff');
+  drawText(sf.name, x0 + 23, ry, 1, PAL.white);
+  for (let j = 0; j < 5; j++) {
+    const fill = Math.max(0, Math.min(1, sf.slip - j));
+    R(x0 + 68 + j * 5, ry + 1, 4, 5, PAL.navy);
+    if (fill > 0) R(x0 + 68 + j * 5, ry + 1, Math.round(4 * fill), 5, sf.body);
+  }
+  if (z !== undefined) drawText('Z' + (z + 1), x0 + 98, ry, 1, PAL.lime);
+}
+
 function drawSurfaceGuide(x0, y0) {
-  const first = firstZones();
   R(x0 + 2, y0 + 2, GUIDE_W, GUIDE_H, PAL.ink); box(x0, y0, GUIDE_W, GUIDE_H, PAL.deepnavy); R(x0 + 1, y0 + 1, GUIDE_W - 2, 1, PAL.lilac);
   drawTextC('HOW SLIPPERY?', x0 + GUIDE_W / 2, y0 + 4, 1, PAL.yellow);
-  Object.keys(KINDS).forEach(function (k, i) {
-    const kd = KINDS[k], ry = y0 + 15 + i * 10;
-    R(x0 + 5, ry, 14, 7, kd.edge); R(x0 + 6, ry + 1, 12, 5, kd.body);      // a little ledge in that colour
-    R(x0 + 6, ry + 1, 12, 1, kd.light); R(x0 + 6, ry + 2, 12, 1, kd.cap);
-    if (kd.friction >= GRIP_FRICTION) for (let t = 1; t < 12; t += 3) R(x0 + 6 + t, ry - 1, 1, 1, kd.cap);
-    else if (kd.friction <= SLIP_FRICTION && k !== 'bouncy') R(x0 + 9, ry + 1, 3, 1, '#ffffff');
-    drawText(kd.name, x0 + 23, ry, 1, PAL.white);
-    if (k === 'bouncy') drawText('BOING', x0 + 62, ry, 1, kd.cap);
-    else {
-      const n = Math.max(1, Math.min(5, Math.round((1 - kd.friction) * 5)));   // pips: how slippery
-      for (let j = 0; j < 5; j++) R(x0 + 62 + j * 5, ry + 1, 4, 5, j < n ? kd.body : PAL.navy);
-    }
-    drawText('Z' + (first[k] + 1), x0 + 95, ry, 1, first[k] ? PAL.silver : PAL.lime);
-  });
+  MATERIALS.forEach(function (k, i) { drawMaterialRow(x0, y0 + 15 + i * 10, k); });
+}
+
+function drawMaterialSign(x0, y0, key) {
+  R(x0 + 2, y0 + 2, GUIDE_W, SIGN_H, PAL.ink); box(x0, y0, GUIDE_W, SIGN_H, PAL.deepnavy); R(x0 + 1, y0 + 1, GUIDE_W - 2, 1, PAL.lilac);
+  drawMaterialRow(x0, y0 + 4, key);
 }
 
 // ---------- scenery (no collision). x = centre, y = the surface it stands on, in art pixels ----------
@@ -313,7 +321,7 @@ const DECO = {
     R(x0 + Math.round(d.w / 2) - 1, top + 2, 2, d.h - 4, d.bg[2]); R(x0 + 2, top + Math.round(d.h / 2), d.w - 4, 2, d.bg[2]);
     R(x0 - 2, y - 1, d.w + 4, 2, d.bg[2]);
   },
-  board: function (x, y) { drawSurfaceGuide(Math.round(x - GUIDE_W / 2), y - GUIDE_H); },   // the guide, on the wall
+  material: function (x, y, d) { drawMaterialSign(Math.round(x - GUIDE_W / 2), y - SIGN_H, d.text); },   // a new material
   hook: function (x, y) { R(x - 1, y - 8, 3, 3, PAL.silver); R(x, y - 5, 1, 4, PAL.silver); R(x - 1, y - 2, 1, 1, PAL.silver); },
   bracket: function (x, y) { R(x - 1, y - 3, 3, 9, PAL.ink); R(x, y - 2, 1, 7, PAL.silver); },
   toothbrush: function (x, y) {
@@ -335,7 +343,7 @@ const DECO = {
 };
 
 // Big props on the wall are drawn before the platforms; small ones stand on the platforms, in front.
-const BACK_DECO = { tub: true, window: true, lid: true, pipe: true, bin: true, basin: true, board: true };
+const BACK_DECO = { tub: true, window: true, lid: true, pipe: true, bin: true, basin: true, material: true };
 
 // The zone (0 to 4) where each kind of surface first turns up in the level.
 let FIRST_ZONES = null;
@@ -343,7 +351,7 @@ function firstZones() {
   if (!FIRST_ZONES) {
     FIRST_ZONES = {};
     for (const b of LEVEL.blocks) {
-      const k = SURFACES[b.surface].kind, z = zoneIndex(b.y);
+      const k = b.surface, z = zoneIndex(b.y);
       if (FIRST_ZONES[k] === undefined || z < FIRST_ZONES[k]) FIRST_ZONES[k] = z;
     }
   }
@@ -410,8 +418,8 @@ function drawPump(game) {
 function shownDirt(game) { return DIRT_LOOK ? dirtOf(game) : 0; }
 function soapColor(dirt) { return dirt < 0.25 ? PAL.yellow : dirt < 0.5 ? PAL.orange : dirt < 0.8 ? PAL.brown : PAL.slate; }
 
-// The soap bar, about 16 x 12 pixels with its top-left at (x, y). face: 'smile', 'happy', 'shock', 'angry'
-// or 'glum'. (lx, ly) is where the eyes look (-1 to 1). The title screen draws it too.
+// The soap bar, about 16 x 12 pixels with its top-left at (x, y). face: 'smile', 'happy', 'shock', 'angry',
+// 'glum' or 'ko' (dazed after a fall). (lx, ly) is where the eyes look (-1 to 1). The title screen draws it too.
 function drawSoapSprite(x, y, w, h, dirt, face, lx, ly) {
   roundBox(x, y, w, h, soapColor(dirt));
   R(x + 3, y + 1, 4, 1, dirt < 0.5 ? PAL.white : PAL.silver);            // shine
@@ -420,6 +428,7 @@ function drawSoapSprite(x, y, w, h, dirt, face, lx, ly) {
   const mx = x + Math.floor(w / 2) - 2, my = y + h - 5;
   for (let i = 0; i < 2; i++) {
     if (face === 'happy') { R(ex[i], ey + 2, 1, 1, PAL.ink); R(ex[i] + 1, ey + 1, 1, 1, PAL.ink); R(ex[i] + 2, ey + 2, 1, 1, PAL.ink); continue; }
+    if (face === 'ko') { for (let j = 0; j < 3; j++) { R(ex[i] + j, ey + j, 1, 1, PAL.ink); R(ex[i] + 2 - j, ey + j, 1, 1, PAL.ink); } continue; }
     R(ex[i], ey, 3, 4, PAL.white);
     if (face === 'shock') R(ex[i] + 1, ey + 1, 1, 2, PAL.ink);
     else R(ex[i] + (lx > 0.3 ? 1 : 0), ey + (ly > 0.3 ? 2 : ly < -0.3 ? 0 : 1), 2, 2, PAL.ink);
@@ -430,6 +439,7 @@ function drawSoapSprite(x, y, w, h, dirt, face, lx, ly) {
     R(mx, my + 1, 5, 1, PAL.ink);
   } else if (face === 'shock') { R(mx + 1, my - 1, 3, 3, PAL.ink); }
   else if (face === 'glum') { R(mx, my + 1, 5, 1, PAL.ink); }
+  else if (face === 'ko') { R(mx, my + 1, 1, 1, PAL.ink); R(mx + 1, my, 1, 1, PAL.ink); R(mx + 2, my + 1, 1, 1, PAL.ink); R(mx + 3, my, 1, 1, PAL.ink); R(mx + 4, my + 1, 1, 1, PAL.ink); }
   else { R(mx, my, 1, 1, PAL.ink); R(mx + 1, my + 1, 3, 1, PAL.ink); R(mx + 4, my, 1, 1, PAL.ink); }
   if (dirt > 0.25) { R(x + 2, y + h - 4, 2, 2, PAL.brown); R(x + w - 5, y + 2, 2, 2, PAL.brown); }
   if (dirt > 0.6) { R(x + 8, y + h - 4, 2, 1, PAL.slate); }
@@ -452,7 +462,14 @@ function drawSoap(game, aim) {
   let lx = 0, ly = 0;                                                    // eyes look where the soap aims or goes
   if (aim) { lx = aim.x; ly = aim.y; }
   else { const sp = Math.sqrt(s.vx * s.vx + s.vy * s.vy); if (sp > 30) { lx = s.vx / sp; ly = s.vy / sp; } }
-  drawSoapSprite(x, y, w, h, dirt, s.face || (dirt > 0.5 ? 'glum' : 'smile'), lx, ly);
+  drawSoapSprite(x, y, w, h, dirt, s.flopT > 0 ? 'ko' : s.face || (dirt > 0.5 ? 'glum' : 'smile'), lx, ly);
+  if (s.flopT > 0) {                                                     // dazed: little stars going round
+    const t = now() * 5;
+    for (let i = 0; i < 3; i++) {
+      const a = t + i * 2.1;
+      R(x + Math.round(w / 2 + Math.cos(a) * 7), y - 3 + Math.round(Math.sin(a) * 2), 1, 1, i ? PAL.yellow : PAL.white);
+    }
+  }
   return { x: x, y: y, w: w, h: h };
 }
 

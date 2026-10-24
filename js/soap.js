@@ -11,7 +11,7 @@ function newGame() {
     pump: { x: LEVEL.pump.x, y: LEVEL.pump.y, w: LEVEL.pump.w, h: LEVEL.pump.h },   // the intro moves it
     meter: { p: 0, dir: 1 },
     falls: 0, shots: 0, time: 0,
-    maxZone: 0, lastY: LEVEL.start.y - SOAP_H,
+    maxZone: 0,
     taunt: '', tauntT: 0, lastTaunt: -1,
     winT: 0,
     rag: null,                       // the beaten pump soap, tumbling (see knockPump)
@@ -22,7 +22,9 @@ function newGame() {
 
 function makeSoap(cx, bottom) {
   return { x: cx - SOAP_W / 2, y: bottom - SOAP_H, w: SOAP_W, h: SOAP_H,
-           vx: 0, vy: 0, ground: null, hopped: false, bump: null, restT: 0, still: false, airT: 0, wasAir: true, canAim: false, sq: 0, impact: 0 };
+           vx: 0, vy: 0, ground: null, hopped: false, bump: null, restT: 0, still: false, airT: 0, wasAir: true, canAim: false, sq: 0, impact: 0,
+           peakY: bottom - SOAP_H,          // highest point since last standing (a fall is measured from here)
+           flopT: 0 };                      // > 0: lying flat after a fall, cannot shoot
 }
 
 // Queue something for main.js to play or show. Capped so the level checker (which never reads it) stays small.
@@ -63,7 +65,7 @@ function stepSoap(s, solids, dt) {
   for (let i = 0; i < solids.length; i++) {
     const b = solids[i];
     if (!overlaps(s, b)) continue;
-    const bounce = SURFACES[b.surface].bounce, bouncy = SURFACES[b.surface].kind === 'bouncy';
+    const bounce = SURFACES[b.surface].bounce, bouncy = bounce >= 0.5;
     if (s.vy >= 0) {                                            // landing
       s.y = b.y - s.h;
       s.impact = Math.max(s.impact, s.vy);
@@ -99,6 +101,11 @@ function physicsFrame(game, dt) {
   }
   if (s.sq > 0) s.sq = Math.max(0, s.sq - 2.5 * dt);
   if (s.sq < 0) s.sq = Math.min(0, s.sq + 2.5 * dt);
+  if (s.flopT > 0) {                                            // lying flat after a fall, then up again
+    s.flopT -= dt;
+    s.sq = 0.35;
+    if (s.flopT <= 0) { s.flopT = 0; s.sq = -0.3; emit(game, 'getup', { x: s.x + s.w / 2, y: s.y + s.h }); }
+  }
 
   // Fully stopped? Not if a slope pushes harder than the surface friction can cancel.
   // (Only used for the level checker. The player can shoot while sliding.)
@@ -114,9 +121,10 @@ function physicsFrame(game, dt) {
   // The little hop off a hard landing counts as touching, so a shot let go then is not held up.
   if (s.ground || s.hopped) s.airT = 0; else s.airT += dt;
   s.hopped = false;
-  s.canAim = s.airT <= AIM_GRACE;
+  s.canAim = s.airT <= AIM_GRACE && s.flopT === 0;
   if (s.ground && s.wasAir) onLand(game);
   s.wasAir = !s.ground;
+  s.peakY = s.ground ? s.y : Math.min(s.peakY, s.y);
 
   if (game.state === 'play' && overlaps(s, game.pump)) {        // knocked it: the pump soap goes flying, the soap watches
     game.state = 'winning'; game.winT = 0;
@@ -209,17 +217,19 @@ function onLand(game) {
   s.impact = 0;
   game.maxZone = Math.max(game.maxZone, z);                     // highest zone reached (the height bar shows it)
 
-  // A fall: this landing is much lower than the last one.
-  if (s.y - game.lastY > FALL_MIN_DROP) {
+  // A fall: dropped further than the height of the zone the drop started in. Flop, and the pump soap gloats.
+  const from = LEVEL.zones[zoneIndex(s.peakY + s.h)];
+  if (s.y - s.peakY > from.bottom - from.top) {
     game.falls++;
+    s.flopT = FLOP_TIME;
+    s.vx = 0;
     let t;
     do { t = Math.floor(Math.random() * TAUNTS.length); } while (t === game.lastTaunt && TAUNTS.length > 1);
     game.lastTaunt = t;
     game.taunt = TAUNTS[t];
     game.tauntT = TAUNT_TIME;
-    emit(game, 'fall');
+    emit(game, 'flop', { x: s.x + s.w / 2, y: s.y + s.h });
   }
-  game.lastY = s.y;
 }
 
 // Squeeze meter: starts at 0, rises (faster near the top), then falls, then repeats.

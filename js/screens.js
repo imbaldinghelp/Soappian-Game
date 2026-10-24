@@ -67,6 +67,7 @@ function drawLogo(text, cx, y, size, t) {
 const TITLE_SKY = ['#7d97dc', '#6c84cc', '#a3b8ee', '#5a70b8'];          // same colours as the towel rack zone
 const TITLE_TAUNTS = TAUNTS.filter(function (s) { return s.length <= 22; });   // short ones fit beside the logo
 const TITLE_BIN = { light: '#e0f7f0', cap: '#b5e6d8', body: '#93cfc0', edge: '#3e6b68' };   // a mint bin (just scenery here)
+const TITLE_FLOOR = { light: '#ffffff', cap: '#fff3df', body: '#ecc08e', band: '#ddab78', edge: '#7a5545' };   // soft sandy floor
 
 function drawTitleScene(t) {
   const gy = LOW_H - 30;                                                  // top of the floor
@@ -78,9 +79,9 @@ function drawTitleScene(t) {
     R(p[0], p[1], 2, 2, PAL.cream);
     if (Math.floor(t * 0.8 + i * 0.4) % 3 === 0) { R(p[0] - 1, p[1], 4, 2, PAL.cream); R(p[0], p[1] - 1, 2, 4, PAL.cream); R(p[0], p[1], 2, 2, PAL.white); }
   });
-  const fl = SURFACES.tile;                                               // the floor, like soft ground
+  const fl = TITLE_FLOOR;                                                 // the floor, like soft ground
   R(0, gy, LOW_W, LOW_H - gy, fl.edge);
-  fillPat(bodyPattern('tile'), 0, gy + 1, LOW_W, LOW_H - gy - 1);
+  R(0, gy + 1, LOW_W, LOW_H - gy - 1, fl.body); R(0, gy + 14, LOW_W, 2, fl.band);
   R(0, gy + 1, LOW_W, 1, fl.light); R(0, gy + 2, LOW_W, 2, fl.cap); R(0, gy + 4, LOW_W, 1, fl.band);
 
   // the dustbin, with our soap peeking out and glaring at the pump soap
@@ -107,19 +108,19 @@ function drawTitle(game, input) {
   drawButton(START_BTN, 'START', 2, hovering(input, START_BTN));
   if (Math.floor(t * 1.5) % 2 === 0) { drawText('>', START_BTN.x - 9, START_BTN.y + 6, 1, PAL.cream); drawText('<', START_BTN.x + START_BTN.w + 4, START_BTN.y + 6, 1, PAL.cream); }
   drawTextC('DRAG. SQUEEZE. SLIDE. CLIMB.', LOW_W / 2, 106, 1, PAL.white);
-  drawTextC('SUTD WINTER GAME JAM 2026', LOW_W / 2, LOW_H - 16, 1, SURFACES.tile.edge, true);
+  drawTextC('SUTD WINTER GAME JAM 2026', LOW_W / 2, LOW_H - 16, 1, TITLE_FLOOR.edge, true);
   drawSoundButton(TITLE_SOUND_BTN);
 }
 
 // ---------- intro cutscene ----------
-// Runs on the real level: the pump soap shoves the soap left along the counter, off its end, and
-// straight down the chute into the dustbin below. updateIntro moves the soap and the pump; it returns
-// true when it is over.
+// Runs on the real level: the pump soap shoves the soap left across the sink, the soap pops over the
+// sink's left lip and drops all the way down into the dustbin. updateIntro moves the soap and the pump;
+// it returns true when it is over.
 function startIntro(game) {
   game.state = 'intro';
-  game.pump.x = LEVEL.pump.x;
+  game.pump.x = LEVEL.pumpIntroX;
   const s = game.soap;
-  s.x = LEVEL.pump.x - s.w - 2 * TILE_PX; s.y = LEVEL.pump.y + LEVEL.pump.h - s.h; s.vx = 0; s.vy = 0;
+  s.x = LEVEL.pumpIntroX - s.w - TILE_PX; s.y = LEVEL.pump.y + LEVEL.pump.h - s.h; s.vx = 0; s.vy = 0;
   game.intro = { t: 0, phase: 'talk', fallX: 0, fallY: 0, landed: false };
 }
 
@@ -132,19 +133,22 @@ function updateIntro(game, dt) {
     if (it.t >= INTRO_TALK) { it.phase = 'push'; it.t = 0; playSound('push'); }
   } else if (it.phase === 'push') {
     const k = Math.min(1, it.t / INTRO_PUSH), e = k * k;                  // speeds up as it shoves
-    const edge = LEVEL.counterEdge;                                       // left end of the counter
-    p.x = LEVEL.pump.x - e * (LEVEL.pump.x - edge);                       // all the way to the edge
+    const edge = LEVEL.sinkEdge;                                          // inside of the sink's left lip
+    p.x = LEVEL.pumpIntroX - e * (LEVEL.pumpIntroX - (edge + s.w));       // shoves the soap up against the lip
     if (p.x < s.x + s.w) { s.x = p.x - s.w; s.face = 'shock'; }
     game.pumpMood = 'push';
-    if (s.x + s.w <= edge || k >= 1) {                                    // clear of the counter: drop
-      it.phase = 'fall'; it.t = 0; it.fallX = s.x; it.fallY = s.y; s.vy = 0;
+    if (s.x <= edge + 1 || k >= 1) {                                      // against the lip: pops over it
+      it.phase = 'fall'; it.t = 0; it.fallX = s.x; it.fallY = s.y; s.vy = -INTRO_HOP;
       playSound('whistle');
     }
   } else if (it.phase === 'fall') {
     s.vy = Math.min(INTRO_FALL_MAX, s.vy + INTRO_FALL_G * dt);
     s.y += s.vy * dt;
-    const endY = LEVEL.start.y - s.h, k = Math.min(1, (s.y - it.fallY) / (endY - it.fallY));
-    s.x = it.fallX + (LEVEL.start.x - s.w / 2 - it.fallX) * (k * k * (3 - 2 * k));   // settles over the bin
+    const smooth = function (k) { return k * k * (3 - 2 * k); };
+    const over = smooth(Math.min(1, it.t / 0.4));                         // over the lip and out to the drop line
+    const outX = it.fallX + (LEVEL.dropX - s.w / 2 - it.fallX) * over;
+    const endY = LEVEL.start.y - s.h, k = Math.max(0, Math.min(1, (s.y - it.fallY) / (endY - it.fallY)));
+    s.x = outX + (LEVEL.start.x - s.w / 2 - outX) * smooth(k);           // settles over the bin
     s.sq = -0.3; s.vx = 0;
     game.pumpMood = it.t < 1.2 ? 'talk' : 'smug';
     if (s.y >= endY) {

@@ -75,6 +75,7 @@ function inButton(p, r) { return inRect(p.x / SCALE_UP, p.y / SCALE_UP, r); }   
 function teleport(s, x, y) {
   s.x = x - s.w / 2; s.y = y - s.h;
   s.vx = 0; s.vy = 0; s.ground = null; s.restT = 0; s.still = false; s.canAim = false; s.airT = 1; s.wasAir = true;
+  s.peakY = s.y; s.flopT = 0;
 }
 
 canvas.addEventListener('pointerdown', function (e) {
@@ -184,9 +185,13 @@ function handleEvents() {
       const k = Math.min(1, d.speed / 2500);
       playSound('bonk', k);
       fxBurst('dust', d.x, d.y, 2 + Math.round(k * 5), PAL.silver);
-    } else if (ev.type === 'fall') {
-      playSound('fall');
-      fxBurst('dust', game.soap.x + game.soap.w / 2, game.soap.y + game.soap.h, 10, PAL.brown);
+    } else if (ev.type === 'flop') {                                 // landed flat after a fall
+      playSound('flop');
+      fxBurst('dust', d.x, d.y, 14, PAL.silver);
+      fxShake(0.3);
+    } else if (ev.type === 'getup') {                                // back on its feet
+      playSound('jump', 0);
+      fxBurst('bubble', d.x, d.y, 4, PAL.white);
     } else if (ev.type === 'win') {
       playSound('win');
       fxBurst('spark', game.pump.x + game.pump.w / 2, game.pump.y + game.pump.h / 2, 16, PAL.yellow);

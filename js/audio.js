@@ -90,10 +90,11 @@ const SYNTH = {
     else if (surface === 'metal') tone('square', 1900, 1700, 0.05, v * 0.25);                      // tink
     else hiss('lowpass', 1200, 1, 0.05, v * 0.6);
   },
-  fall: function () {                                    // sad trombone, short
-    tone('triangle', 392, 370, 0.18, 0.18);
-    tone('triangle', 349, 330, 0.18, 0.18, 0.2);
-    tone('triangle', 311, 220, 0.4, 0.18, 0.4);
+  flop: function () {                                    // a wet bar of soap hitting the floor flat
+    tone('sine', 130, 45, 0.18, 0.6);
+    hiss('lowpass', 900, 1, 0.12, 0.55);
+    hiss('bandpass', 1600, 2, 0.08, 0.3, 0.02, 500);   // the slap
+    tone('triangle', 330, 220, 0.25, 0.08, 0.2);       // a little groan
   },
   win: function () {
     [523, 659, 784, 1047, 784, 1047].forEach(function (f, i) { tone('square', f, f, 0.12, 0.1, i * 0.1); });

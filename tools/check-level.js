@@ -30,7 +30,7 @@ function makeSim(substeps) {
     const s = game.soap;
     s.x = st.x - A.SOAP_W / 2; s.y = st.y - A.SOAP_H;
     s.vx = 0; s.vy = 0; s.ground = null; s.restT = 0; s.still = false; s.canAim = false; s.airT = 0; s.wasAir = true; s.sq = 0;
-    game.maxZone = st.mz; game.lastY = s.y; game.state = 'play';
+    s.peakY = s.y; s.flopT = 0; game.maxZone = st.mz; game.state = 'play';
   }
   function result(startMz) {
     const s = game.soap;
