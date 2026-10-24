@@ -9,9 +9,11 @@
 // surface it stands on. Kinds are drawn in draw.js (drawDeco). options.w / options.h size the big background
 // props in tiles, options.text is the text on a sign (or the material on a 'material' board),
 // options.wall = true hangs the sign on the wall (no post).
-// The soap is 1 tile wide and 3/4 of a tile tall. Every side of every platform ricochets.
-// The layout follows the team's sketches (level1-2 to level4-5): 1 tile = 32 px of the drawings, with every
-// ledge made a tile wider (3 at least) so the climb is easier.
+// The soap is about 1.4 tiles wide and 3/4 of a tile tall. Every side of every platform ricochets.
+// Foddian layout: each zone is a staircase that crosses the level, so a missed jump drops past the ledges
+// below instead of onto them. Slippery ledges sit under the hard jumps, grippy ones are the reward, and little
+// walls on ledge ends stop a slide where the route needs it. Each zone teaches its material, then tests it.
+// The old layout (from the team's sketches) is in level.backup.js.
 
 function plat(col, row, w, surface, o) {
   o = o || {};
@@ -34,116 +36,68 @@ const LEVEL = {
   // bg = wall colours, dusk at the bottom to dawn at the top: upper band, lower band, light line, props.
   zones: [
     { name: 'Dustbin',     top: 70 * TILE_PX, bottom: 89 * TILE_PX, spawn: at(4, 88),     bg: ['#7f76a3', '#6f6694', '#9d95c2', '#5e5582'] },
-    { name: 'Floor tiles', top: 54 * TILE_PX, bottom: 70 * TILE_PX, spawn: at(16, 67),    bg: ['#7cc4a4', '#6ab394', '#a2dcc0', '#589c80'] },
-    { name: 'Toilet',      top: 34 * TILE_PX, bottom: 54 * TILE_PX, spawn: at(15.5, 52),  bg: ['#a48fc9', '#9480bb', '#c2b0e0', '#7d6aa6'] },
-    { name: 'Towel rack',  top: 18 * TILE_PX, bottom: 34 * TILE_PX, spawn: at(11, 32),    bg: ['#7d97dc', '#6c84cc', '#a3b8ee', '#5a70b8'] },
-    { name: 'Sink',        top: 0,            bottom: 18 * TILE_PX, spawn: at(15.5, 16),  bg: ['#c4a9de', '#b597d2', '#e2cdf0', '#9a7fbd'] },
+    { name: 'Floor tiles', top: 54 * TILE_PX, bottom: 70 * TILE_PX, spawn: at(22, 67),    bg: ['#7cc4a4', '#6ab394', '#a2dcc0', '#589c80'] },
+    { name: 'Toilet',      top: 34 * TILE_PX, bottom: 54 * TILE_PX, spawn: at(9, 53),  bg: ['#a48fc9', '#9480bb', '#c2b0e0', '#7d6aa6'] },
+    { name: 'Towel rack',  top: 18 * TILE_PX, bottom: 34 * TILE_PX, spawn: at(11.5, 33),    bg: ['#7d97dc', '#6c84cc', '#a3b8ee', '#5a70b8'] },
+    { name: 'Sink',        top: 0,            bottom: 18 * TILE_PX, spawn: at(18.5, 16),  bg: ['#c4a9de', '#b597d2', '#e2cdf0', '#9a7fbd'] },
   ],
 
   blocks: [
     // ---- Zone 1: dustbin. PLASTIC (2 bars). (rows 70 to 88) ----
-    plat(0, 88, 29, 'plastic', { h: 1 }),   // floor (the bin is between the first two pillars)
-    plat(1, 84, 1, 'plastic', { h: 4 }),   // bin wall, left
-    plat(6, 84, 1, 'plastic', { h: 4 }),   // bin wall, right
-    plat(11, 86, 1, 'plastic', { h: 2 }),   // pillar
-    plat(16, 83, 1, 'plastic', { h: 5 }),   // pillar
-    plat(20, 86, 1, 'plastic', { h: 2 }),   // pillar
-    plat(23, 81, 1, 'plastic', { h: 7 }),   // pillar
-    plat(28, 84, 1, 'plastic', { h: 4 }),   // pillar
-    plat(15, 79, 6, 'plastic'),
-    plat(10, 76, 4, 'plastic'),
-    plat(22, 76, 3, 'plastic'),
-    plat(5, 74, 3, 'plastic'),
-    plat(0, 71, 4, 'plastic'),
-    plat(9, 71, 4, 'plastic'),
-    plat(24, 72, 4, 'plastic'),
+    // Learn to aim: a staircase to the right, three to four tiles up a step. The floor catches every fall here.
+    plat(0, 88, 29, 'plastic', { h: 1 }),   // floor (the bin is between the first two walls)
+    plat(1, 84, 1, 'plastic', { h: 4 }),    // bin wall, left
+    plat(6, 84, 1, 'plastic', { h: 4 }),    // bin wall, right
+    plat(17, 86, 1, 'plastic', { h: 2 }),   // pillar
+    plat(22, 85, 1, 'plastic', { h: 3 }),   // pillar
+    plat(9, 85, 3, 'plastic'),
+    plat(14, 82, 3, 'plastic'),
+    plat(19, 78, 3, 'plastic'),
+    plat(23, 75, 3, 'plastic'),
+    plat(26, 71, 3, 'plastic'),             // rest point at the top of the zone
 
     // ---- Zone 2: bathroom floor. CERAMIC (3 bars). (rows 54 to 69) ----
-    plat(9, 57, 1, 'ceramic', { h: 1 }),   // pillar
-    plat(17, 55, 1, 'ceramic', { h: 2 }),   // pillar
-    plat(4, 66, 3, 'ceramic'),
-    plat(6, 65, 1, 'ceramic', { h: 1 }),   // wall on the right end
-    plat(9, 65, 3, 'ceramic'),
-    plat(15, 67, 3, 'ceramic'),
-    plat(20, 66, 4, 'ceramic'),
-    plat(23, 64, 1, 'ceramic', { h: 2 }),   // wall on the right end
-    plat(26, 67, 3, 'ceramic'),
-    plat(2, 61, 3, 'ceramic'),
-    plat(8, 62, 3, 'ceramic'),
-    plat(8, 61, 1, 'ceramic', { h: 1 }),   // wall on the left end
-    plat(14, 62, 4, 'ceramic'),
-    plat(17, 60, 1, 'ceramic', { h: 2 }),   // wall on the right end
-    plat(25, 61, 3, 'ceramic'),
-    plat(0, 58, 3, 'ceramic'),
-    plat(11, 59, 3, 'ceramic'),
-    plat(20, 60, 4, 'ceramic'),
-    plat(20, 58, 1, 'ceramic', { h: 2 }),   // wall on the left end
-    plat(4, 56, 3, 'ceramic'),
-    plat(4, 55, 1, 'ceramic', { h: 1 }),   // wall on the left end
-    plat(11, 55, 3, 'ceramic'),
-    plat(23, 56, 3, 'ceramic'),
+    // Learn to slide: a staircase back to the left. Little walls stop the first slides; slide off the far
+    // left one and it is a long drop back to the bin.
+    plat(20, 67, 4, 'ceramic'),
+    plat(20, 66, 1, 'ceramic', { h: 1 }),   // wall on the left end
+    plat(12, 64, 5, 'ceramic'),
+    plat(8, 61, 3, 'ceramic'),
+    plat(1, 57, 5, 'ceramic'),
+    plat(1, 56, 1, 'ceramic', { h: 1 }),    // wall on the left end
 
     // ---- Zone 3: toilet. WET (5 bars) and TOILET SEAT (2.5 bars). (rows 34 to 53) ----
-    plat(12, 45, 1, 'seat', { h: 2 }),   // wall
-    plat(25, 44, 1, 'seat', { h: 3 }),   // wall
-    plat(6, 42, 1, 'wet', { h: 2 }),   // toilet bowl, left side
-    plat(9, 42, 1, 'wet', { h: 2 }),   // toilet bowl, right side
-    plat(13, 52, 4, 'wet'),
-    plat(20, 52, 3, 'wet'),
-    plat(7, 51, 3, 'seat'),
-    plat(10, 51, 3, 'wet'),
-    plat(17, 49, 3, 'seat'),
-    plat(25, 50, 3, 'seat'),
-    plat(0, 48, 3, 'seat'),
-    plat(3, 48, 3, 'wet'),
-    plat(0, 45, 3, 'wet'),
-    plat(13, 47, 4, 'wet'),
-    plat(21, 46, 4, 'wet'),
-    plat(26, 46, 3, 'seat'),
-    plat(6, 44, 3, 'seat'),   // toilet bowl, bottom
-    plat(21, 41, 3, 'wet'),
-    plat(11, 40, 4, 'seat'),
-    plat(17, 38, 3, 'seat'),
-    plat(14, 35, 4, 'seat'),
-    plat(21, 35, 4, 'seat'),
+    // Wet slides almost forever: land where it runs into seat, into a wall, or into the toilet bowl.
+    plat(7, 53, 4, 'seat'),                 // rest point at the bottom of the zone
+    plat(13, 50, 2, 'wet'), plat(15, 50, 3, 'seat'),
+    plat(21, 47, 3, 'seat'),
+    plat(25, 42, 1, 'seat', { h: 1 }),      // wet trough against the wall: hop over the lip
+    plat(26, 43, 3, 'wet'),
+    plat(21, 38, 1, 'wet', { h: 1 }),       // toilet bowl, left side
+    plat(22, 39, 3, 'seat'),                // toilet bowl, bottom
+    plat(25, 38, 1, 'wet', { h: 1 }),       // toilet bowl, right side
+    plat(16, 36, 3, 'seat'),
 
     // ---- Zone 4: towel rack. TOWEL (1 bar), with wet. (rows 18 to 33) ----
-    plat(10, 32, 3, 'towel'),
-    plat(17, 32, 3, 'towel'),
-    plat(25, 31, 3, 'towel'),
-    plat(5, 30, 3, 'towel'),
-    plat(14, 29, 3, 'towel'),
-    plat(22, 29, 3, 'towel'),
-    plat(8, 27, 3, 'towel'),
-    plat(2, 26, 3, 'towel'),
-    plat(25, 26, 3, 'towel'),
-    plat(13, 24, 3, 'towel'),
-    plat(0, 23, 3, 'towel'),
-    plat(6, 23, 3, 'towel'),
-    plat(16, 23, 3, 'towel'),
-    plat(21, 22, 3, 'towel'),
-    plat(24, 22, 3, 'wet'),
-    plat(2, 20, 3, 'wet'),
-    plat(5, 20, 3, 'towel'),
-    plat(8, 19, 3, 'towel'),
-    plat(18, 19, 3, 'towel'),
+    // Towel grips, so the ledges are small and far apart. Then a long leap back to the left.
+    plat(10, 33, 3, 'towel'),
+    plat(16, 30, 2, 'towel'),
+    plat(21, 27, 2, 'towel'),
+    plat(24, 23, 2, 'wet'), plat(26, 23, 2, 'towel'),   // land on the wet end, slide onto the towel
+    plat(18, 20, 2, 'towel'),
+    plat(11, 18, 3, 'towel'),
+    plat(4, 21, 3, 'towel'),               // rest point: catches a missed jump at the sink, hop back to the right
 
     // ---- Zone 5: sink. CERAMIC and WET. (rows 0 to 17) ----
-    plat(13, 16, 4, 'ceramic'),
-    plat(8, 14, 3, 'ceramic'),
-    plat(8, 13, 1, 'ceramic', { h: 1 }),   // wall on the left end
-    plat(11, 12, 3, 'ceramic'),
-    plat(17, 12, 3, 'ceramic'),
-    plat(19, 11, 1, 'ceramic', { h: 1 }),   // wall on the right end
-    plat(23, 11, 3, 'ceramic'),
-    plat(26, 11, 3, 'wet'),
-    plat(26, 8, 3, 'wet'),
-    plat(22, 7, 3, 'wet'),
-    plat(16, 6, 4, 'wet'),
-    plat(11, 5, 4, 'wet'),
-    plat(2, 4, 1, 'ceramic', { h: 2 }),   // sink: left lip
-    plat(3, 5, 5, 'ceramic', { h: 1 }),   //   basin: slide in over the right lip and into the pump soap
-    plat(8, 4, 1, 'ceramic', { h: 2 }),   //   right lip
+    // Up the right side, a long leap onto a wet runway, then over the sink's lip.
+    plat(17, 16, 3, 'ceramic'),
+    plat(23, 13, 3, 'ceramic'),
+    plat(26, 9, 3, 'ceramic'),
+    plat(18, 6, 2, 'wet'), plat(15, 6, 3, 'ceramic'),   // wet runway onto ceramic
+    plat(15, 5, 1, 'ceramic', { h: 1 }),    // wall on the left end
+    plat(2, 4, 1, 'ceramic', { h: 2 }),     // sink: left lip
+    plat(3, 5, 5, 'ceramic', { h: 1 }),     //   basin: slide in over the right lip and into the pump soap
+    plat(8, 4, 1, 'ceramic', { h: 2 }),     //   right lip
     plat(0, 0, 29, 'wall'),                 // ceiling
   ],
 
@@ -154,15 +108,15 @@ const LEVEL = {
     deco('sign', 6, 81.9, { text: 'SURFACE MANUAL: PRESS ESC', wall: true }),
     deco('material', 6, 83.3, { text: 'plastic' }),
 
-    deco('material', 13, 69.6, { text: 'ceramic' }),
+    deco('material', 21.5, 69.6, { text: 'ceramic' }),
 
-    deco('material', 17, 53.7, { text: 'wet' }), deco('material', 5, 53.7, { text: 'seat' }),
-    deco('lid', 7.5, 42, { w: 3, h: 3 }),
+    deco('material', 17, 53.7, { text: 'wet' }), deco('material', 3.5, 53.7, { text: 'seat' }),
+    deco('lid', 23.5, 39, { w: 3, h: 3 }),
 
-    deco('material', 14, 33.8, { text: 'towel' }),
-    deco('window', 26.5, 25, { w: 4, h: 4 }),
+    deco('material', 17, 33.8, { text: 'towel' }),
+    deco('window', 5, 27, { w: 4, h: 4 }),
 
-    deco('toothbrush', 15, 16), deco('tap', 8.3, 4), deco('lamp', 5, 0.5),
+    deco('toothbrush', 17.5, 16), deco('tap', 8.3, 4), deco('lamp', 5, 0.5),
   ],
 
   // The pump soap stands in the sink basin. Touch it to win: it goes flying (a ragdoll, see knockPump in soap.js).

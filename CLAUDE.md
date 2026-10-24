@@ -16,8 +16,10 @@ started in is a fall: the soap flops (sound, dazed for FLOP_TIME, can't shoot) a
 soap taunt. Fast falls bring wind (streaks and a roar). Hitting the pump soap flings it as a floppy two piece ragdoll.
 The game draws on a 320 x 180 canvas shown 4x (1280 x 720) with smoothing off. The level is built on a
 16 px tile grid: 29 tiles wide (the camera scrolls sideways as well as up) and 89 tall, five zones bottom to top
-(dustbin, floor tiles, toilet, towel rack, sink), laid out from the team's sketches (1 tile = 32 sketch px), every
-ledge one tile wider than drawn (3 at least) to keep it doable.
+(dustbin, floor tiles, toilet, towel rack, sink). Foddian layout: each zone is a staircase across the level, so a
+missed jump drops past the ledges below (often a zone or more); slippery ledges under hard jumps, grippy ones as the
+reward, little end walls where a slide must stop, and a few rest points at zone boundaries. The old sketch-based
+layout is kept in js/level.backup.js (not loaded).
 Ledges are half a tile thick. No checkpoints. The intro: the pump soap shoves the soap over the sink's left lip,
 and it drops (in front of the level) into the bin.
 Flow: title screen -> intro cutscene (pump shoves the soap off the sink into the bin, click skips) -> play -> win.
