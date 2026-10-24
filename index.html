@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Soappian</title>
+<link rel="icon" href="data:,">
+<style>
+  html, body { margin: 0; height: 100%; background: #1f1d36; overflow: hidden; }
+  body { display: flex; align-items: center; justify-content: center; }
+  canvas {
+    /* 320 x 180 shown at 4x; main.js picks a smaller whole step if the window is smaller */
+    width: 1280px; height: 720px;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    /* a big, high-contrast ring cursor (drawn by the browser, so it never lags) */
+    cursor: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' shape-rendering='crispEdges'><circle cx='16' cy='16' r='10' fill='none' stroke='%232b2847' stroke-width='7'/><circle cx='16' cy='16' r='10' fill='none' stroke='%23ffffff' stroke-width='3'/><rect x='12' y='12' width='8' height='8' fill='%232b2847'/><rect x='14' y='14' width='4' height='4' fill='%23ffe27a'/></svg>") 16 16, crosshair;
+    image-rendering: pixelated;
+  }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<script src="js/config.js"></script>
+<script src="js/level.js"></script>
+<script src="js/soap.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/draw.js"></script>
+<script src="js/screens.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
