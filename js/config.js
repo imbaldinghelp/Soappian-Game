@@ -97,7 +97,8 @@ const RAG_FLING_UP = 1400;                // upward speed it is flung at (px/s)
 const RAG_SPIN = 9;                       // spin it is flung with (turns per second x 2 pi)
 const RAG_BOUNCE = 0.55;                  // how bouncy the pump soap is
 const RAG_GRAVITY = 3040;                 // px/s^2
-const WIN_WATCH = 3.0;                    // seconds of watching it tumble before the win panel
+const RAG_HUG_DRAG = 8;                   // once it touches the level's edge, how fast its sideways speed dies (it drops down the side)
+const WIN_WATCH = 4.5;                    // seconds of watching it tumble (the camera follows it down) before the win panel
 
 // ---- Pump soap taunts (one is picked after each fall; the pixel font is capitals only) ----
 const TAUNTS = [
@@ -146,7 +147,6 @@ const TEX = 'assets/texture/';
 const ART = {
   soap: TEX + 'soap.png',                 // 24 x 16 (the bar inside it is the hitbox, SOAP_W x SOAP_H)
   pump: TEX + 'pump_soap.png',            // 24 x 40 (rows 0 to 10 come off as the head when it is knocked over)
-  bin: TEX + 'prop_bin.png',              // the dustbin, scaled up to fill the space between the bin walls
   plastic: TEX + 'tile_plastic.png',      // 16 x 16 each, tiles seamlessly (ledges are half a tile thick and show its top 8 rows)
   ceramic: TEX + 'tile_ceramic.png',
   wet: TEX + 'tile_wet.png',

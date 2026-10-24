@@ -325,17 +325,42 @@ const DECO = {
     R(x0 + 3, top + 2, d.w - 6, 1, d.bg[2]);
     [x0 + 8, x0 + d.w - 14].forEach(function (fx) { R(fx, y - 5, 6, 5, d.bg[3]); });
   },
-  bin: function (x, y, d) {                             // the dustbin, between its walls
-    const img = IMAGES.bin;
-    if (img) {                                           // Aaron's bin, scaled up by a whole number to fill the space
-      const b = img.box, k = Math.max(1, Math.floor(Math.min(d.w / b.w, d.h / b.h)));
-      L.drawImage(img, b.x, b.y, b.w, b.h, x - Math.round(b.w * k / 2), y - b.h * k, b.w * k, b.h * k);
-      return;
-    }
-    const x0 = x - Math.round(d.w / 2), top = y - d.h;
-    R(x0, top, d.w, d.h, d.bg[3]);
-    R(x0 - 12, top - 2, d.w + 24, 2, SURFACES.plastic.cap);              // rim
-    drawTextC('BIN', x, top + 14, 1, d.bg[2], true);
+  // The dustbin, seen cut open: d.w spans both walls (the two 1 tile plastic blocks), the soap sits inside.
+  // Plastic, so plastic colours. Drawn over the wall blocks, which it covers exactly.
+  bin: function (x, y, d) {
+    const P = SURFACES.plastic, x0 = x - Math.round(d.w / 2), top = y - d.h, T = TILE, x1 = x0 + d.w;
+    const inner = '#c98a5f', shade = '#a96a4c';
+    R(x0 - 3, y, d.w + 6, 2, P.band);                                     // shadow on the floor
+    rr(x0 + T - 2, top - 11, d.w - 2 * T + 4, 12, P.edge);                // the lid, flipped open behind
+    rr(x0 + T - 1, top - 10, d.w - 2 * T + 2, 10, P.band);
+    R(x0 + T + 1, top - 9, d.w - 2 * T - 2, 1, P.cap);
+    R(x - 6, top - 7, 12, 2, P.edge); R(x - 5, top - 7, 10, 1, P.light);    // its handle
+    R(x0 + T, top + 2, d.w - 2 * T, d.h - 2, inner);                      // the inside back
+    R(x0 + T, top - 1, d.w - 2 * T, 3, P.edge); R(x0 + T, top, d.w - 2 * T, 1, P.cap);   // the back of the rim
+    for (let i = x0 + T + 6; i < x1 - T - 2; i += 8) R(i, top + 9, 1, d.h - 14, shade);   // moulded ribs
+    R(x0 + T, top + 2, d.w - 2 * T, 5, shade);                            // shadow under the rim
+    R(x0 + T, y - 3, d.w - 2 * T, 3, shade);
+    R(x0 + T, top + 2, 2, d.h - 2, shade); R(x1 - T - 2, top + 2, 2, d.h - 2, shade);
+    // rubbish in the back corners (the soap sits in the middle)
+    const fy = y - 4;                                                     // top of the foot
+    rr(x0 + T + 3, fy - 8, 10, 8, PAL.white); R(x0 + T + 6, fy - 6, 3, 1, PAL.silver); R(x0 + T + 5, fy - 3, 4, 1, PAL.silver);
+    R(x1 - T - 13, fy - 3, 9, 2, PAL.yellow); R(x1 - T - 14, fy - 5, 2, 3, PAL.yellow); R(x1 - T - 5, fy - 5, 2, 2, PAL.cream);
+    R(x1 - T - 13, fy - 1, 9, 1, PAL.brown);
+    // the two walls
+    [x0, x1 - T].forEach(function (wx, side) {
+      R(wx, top, T, d.h, P.edge);
+      R(wx + 1, top, T - 2, d.h - 1, P.body);
+      R(side ? wx + T - 3 : wx + 1, top, 2, d.h - 1, side ? P.band : P.light);     // lit on the left, shaded on the right
+      R(wx + 1, y - 3, T - 2, 2, P.band);                                           // foot
+      for (let i = 4; i < T - 3; i += 4) R(wx + i, top + 8, 1, d.h - 14, P.band);   // ribs
+      R(wx + 1, top + Math.round(d.h * 0.45), T - 2, 3, P.band);                    // moulded band
+      R(wx + 1, top + Math.round(d.h * 0.45), T - 2, 1, P.cap);
+    });
+    R(x0 - 2, top - 1, d.w + 4, 6, P.edge);                                         // one rim all round, lipped out
+    R(x0 - 1, top, d.w + 2, 4, P.cap); R(x0 - 1, top, d.w + 2, 1, P.light); R(x0 - 1, top + 3, d.w + 2, 1, P.band);
+    R(x0, y - 4, d.w, 4, P.edge); R(x0 + 1, y - 3, d.w - 2, 2, P.band);             // the foot, all the way across
+    R(x0 + 1, y - 3, d.w - 2, 1, P.body);
+    R(x1 - 2, y - 7, 9, 4, P.edge); R(x1 - 1, y - 6, 7, 2, PAL.silver); R(x1 - 1, y - 6, 7, 1, PAL.white);   // pedal
   },
   basin: function (x, y, d) {                           // the sink bowl, behind the basin floor
     const x0 = x - Math.round(d.w / 2), top = y - d.h;
@@ -382,7 +407,7 @@ const DECO = {
 };
 
 // Big props on the wall are drawn before the platforms; small ones stand on the platforms, in front.
-const BACK_DECO = { tub: true, window: true, lid: true, pipe: true, bin: true, basin: true, material: true };
+const BACK_DECO = { tub: true, window: true, lid: true, pipe: true, basin: true, material: true };   // the bin is drawn in front: it covers its wall blocks
 
 // The zone (0 to 4) where each kind of surface first turns up in the level.
 let FIRST_ZONES = null;
@@ -650,8 +675,10 @@ function drawDebug(game, camX, camY) {
     'POS ' + Math.round(s.x + s.w / 2) + ',' + Math.round(s.y + s.h) + '  SPEED ' + Math.round(s.vx) + ',' + Math.round(s.vy),
     'ON ' + (s.ground ? s.ground.surface + (s.ground.push ? ' PUSH ' + s.ground.push : '') : 'AIR') + '  CAN SHOOT ' + s.canAim + '  ZONE ' + (zoneIndex(s.y + s.h / 2) + 1),
     'METER ' + game.meter.p.toFixed(2) + '  SHOTS ' + game.shots + '  FALLS ' + game.falls,
+    // input lag hunting: frame rate, the slowest frame in the last second, and what the last let-go did
+    'FPS ' + PERF.fps + '  SLOWEST ' + PERF.worst + 'MS  LET GO: ' + release.what + (release.ms ? ' +' + release.ms + 'MS' : ''),
   ];
-  R(2, 20, 262, 38, PAL.ink);
+  R(2, 20, 262, 47, PAL.ink);
   lines.forEach(function (l, i) { drawText(l, 4, 22 + i * 9, 1, PAL.lime, true); });
 }
 

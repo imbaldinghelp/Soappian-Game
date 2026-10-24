@@ -5,7 +5,7 @@ The look is soft and gentle: use the pastel colours in PAL and SURFACES (js/conf
 outlines rather than black, calm backgrounds. No anti-aliasing, no blur.
 
 soap.png           24 x 16     the soap (the bar inside it is the hitbox; squashes and stretches in code)
-prop_bin.png       16 x 16     the dustbin at the start (scaled up to fill the bin)
+prop_bin.png       16 x 16     not used any more (the dustbin is drawn in code, a placeholder: a 96 x 64 bin would replace it)
 pump_soap.png      24 x 40     the rival. Rows 0 to 10 are the pump head, 11 to 39 the bottle: they come
                                apart into a ragdoll when it is knocked over
 tile_plastic.png   16 x 16     zone 1 (mint). Tiles seamlessly. Ledges are half a tile thick and show the

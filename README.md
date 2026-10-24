@@ -36,7 +36,8 @@ In VS Code you can also use the Live Server extension.
 | `js/soap.js` | The soap: physics, friction, meter, launch, falls and flops, winning, the pump ragdoll. No drawing. Reports events (launch, land, bounce, flop, getup, win, bonk) for sound and effects |
 | `js/audio.js` | Sound effects: synthesised placeholders, or recordings from `assets/` when `USE_SOUND_FILES` is on |
 | `js/draw.js` | The world, soft 8-bit style on a 320x180 pixel grid: pixel font, platforms by surface, wall colours, scenery, pump, soap, particles, aim line, meter |
-| `js/screens.js` | Everything on top of the world: title screen, intro cutscene, HUD, taunts, pause menu, win screen |
+| `js/screens.js` | Everything on top of the world: title screen, intro cutscene, HUD, taunts, pause menu, win screen with name entry and leaderboard |
+| `js/scores.js` | The leaderboard. Local to this browser for now; swap `loadScores` and `addScore` for an online database later |
 | `js/main.js` | Shows the canvas at 4x, input (mouse, touch, keys), game loop, camera, pause, restart, turns events into sounds and effects |
 | `tools/check-level.js` | Optional. A bot that checks the level can be beaten (see below) |
 | `assets/` | Put Aaron's PNGs here (see `assets/README.txt`) |

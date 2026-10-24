@@ -192,7 +192,8 @@ function ragCollide(game, q) {
     const vn = vx * nx + vy * ny;
     if (vn >= 0) { q.px = q.x - vx; q.py = q.y - vy; continue; }
     const tx = vx - vn * nx, ty = vy - vn * ny;                 // the sliding part of the motion
-    const out = -vn * RAG_BOUNCE;
+    const out = b.edge ? 0 : -vn * RAG_BOUNCE;                  // the level's edges: no rebound, it drops down the side
+    if (b.edge) game.rag.hug = true;
     q.px = q.x - (tx * 0.8 + nx * out); q.py = q.y - (ty * 0.8 + ny * out);
     q.pa = q.a - ((q.a - q.pa) * 0.5 + (ty * nx - tx * ny) / q.r * 0.5);   // rolls along what it hit
     const speed = -vn * RAG_STEPS / DT;
@@ -205,10 +206,11 @@ function updateRagdoll(game, dt) {
   const rag = game.rag;
   if (!rag) return;
   const h = dt / RAG_STEPS, g = RAG_GRAVITY * h * h;
+  const hold = rag.hug ? Math.exp(-RAG_HUG_DRAG * h) : 1;      // after touching the level's edge it slides straight down it
   for (let n = 0; n < RAG_STEPS; n++) {
-    for (const k in rag) {
+    for (const k of ['bottle', 'head']) {
       const q = rag[k];
-      const vx = q.x - q.px, vy = q.y - q.py;
+      const vx = (q.x - q.px) * hold, vy = q.y - q.py;
       q.px = q.x; q.py = q.y;
       q.x += vx; q.y += vy + g;
       const va = (q.a - q.pa) * 0.998;

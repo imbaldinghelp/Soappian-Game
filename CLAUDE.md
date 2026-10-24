@@ -24,7 +24,7 @@ it sideways off the low end, so a miss does not just drop back onto a nearby led
 kept in js/level.backup.js (not loaded).
 Ledges are half a tile thick. No checkpoints. The intro: the pump soap shoves the soap off the sink's open left end,
 and it drops (in front of the level) into the bin.
-Flow: title screen -> intro cutscene (pump shoves the soap off the sink into the bin, click skips) -> play -> win.
+Flow: title screen -> intro cutscene (pump shoves the soap off the sink into the bin, click skips) -> play -> win (the pump soap tumbles down the left side to the bin, the camera follows) -> win screen with a name entry and a local leaderboard.
 
 ## Files
 - index.html: one canvas, loads the scripts in order (no modules, shared globals)
@@ -38,8 +38,10 @@ Flow: title screen -> intro cutscene (pump shoves the soap off the sink into the
 - js/draw.js: the world, drawn straight on the 320x180 page canvas (soft 8-bit style): pixel font, platforms by surface, wall bands,
   scenery (DECO), pump, soap, particles (FX), aim and meter, and drawFrame which puts a frame together
 - js/screens.js: drawn on top of the world: title, intro cutscene (updateIntro + drawIntro), HUD,
-  taunts, pause menu (with the surface manual), win screen, and the button rectangles
-- js/main.js: canvas scaling, input (mouse, touch, keys), state changes, loop, camera, and turning game.events into sound and FX
+  taunts, pause menu (with the surface manual), win screen (your run, name entry, leaderboard), and the button rectangles
+- js/scores.js: the leaderboard, local to this browser for now (loadScores, addScore). Swap their insides for an online database later
+- js/main.js: canvas scaling, input (mouse, touch, keys), state changes, loop, camera, and turning game.events into sound and FX.
+  Debug (D) shows FPS, the slowest frame and what the last let-go did (fired, in air, dazed, too short), for chasing input lag
 - tools/check-level.js: bot that checks the level is beatable (about 10 min). Run after level edits
 
 ## Rules
@@ -47,8 +49,8 @@ Flow: title screen -> intro cutscene (pump shoves the soap off the sink into the
 - Custom physics (AABB, friction `vx *= exp(-K*friction*dt)`). Do not add a physics engine.
 - Tune numbers in config.js, not inline.
 - Art and music must be human-made (jam rules). No AI images or audio. Credit assets in CREDITS.md.
-- Art is in assets/texture/ (ART in config.js; USE_ART on). Sizes in art pixels: soap 24x16 (the bar inside it, 23x12,
-  is the hitbox SOAP_W x SOAP_H), pump 24x40, bin prop 16x16, tiles 16x16, bg and title 320x180 (not drawn yet).
+- Art is in assets/texture/ (ART in config.js; USE_ART on). The dustbin is code-drawn (DECO.bin), a placeholder. Sizes in art pixels: soap 24x16 (the bar inside it, 23x12,
+  is the hitbox SOAP_W x SOAP_H), pump 24x40, tiles 16x16, bg and title 320x180 (not drawn yet).
   Sprites are lined up by their non-transparent part, so empty margins in a PNG are fine. 1 art pixel = 6 world px.
 - Platforms sit on the 16 px tile grid, half a tile thick by default. The soap is about 1.4 tiles wide and 3/4 tall.
 - Look: soft and gentle, like the team's reference: pastel PAL, tinted outlines (no pure black), calm two-tone backgrounds, sparse props.

@@ -4,12 +4,14 @@
 // (LOW_W x LOW_H, 320 x 180).
 
 // Panels and buttons (art pixels). main.js tests clicks against the buttons.
-const WIN_PANEL = { w: 240, h: 150 };
+const WIN_LEFT = { x: 10, y: 26, w: 140, h: 116 }, WIN_RIGHT = { x: 160, y: 26, w: 150, h: 116 };   // your run | the board
+const WIN_SAVE_BTN = { x: WIN_LEFT.x + 8, y: WIN_LEFT.y + 94, w: WIN_LEFT.w - 16, h: 15 };
+const WIN_BTN = { x: WIN_LEFT.x, y: 150, w: WIN_LEFT.w, h: 20 };
+const WIN_MENU_BTN = { x: WIN_RIGHT.x, y: 150, w: WIN_RIGHT.w, h: 20 };
 const START_BTN = { x: Math.round(LOW_W / 2) - 38, y: 76, w: 76, h: 20 };
 const RESTART_BTN = { x: LOW_W - 52, y: 3, w: 48, h: 13 };
 const SOUND_BTN = { x: LOW_W - 69, y: 3, w: 14, h: 13 };
 const TITLE_SOUND_BTN = { x: LOW_W - 18, y: 4, w: 14, h: 13 };
-const WIN_BTN = { x: Math.round(LOW_W / 2) - 68, y: Math.round((LOW_H - WIN_PANEL.h) / 2) + 116, w: 136, h: 22 };
 const RESUME_BTN = { x: Math.round(LOW_W / 2) - 65, y: 24, w: 130, h: 20 };
 const MENU_BTN = { x: Math.round(LOW_W / 2) - 65, y: 130, w: 130, h: 20 };
 
@@ -225,20 +227,83 @@ function drawHud(game, input) {
   }
 }
 
-function drawWin(game, input) {
-  L.globalAlpha = 0.5; R(0, 0, LOW_W, LOW_H, PAL.ink); L.globalAlpha = 1;   // soft shade over the world
-  const pw = WIN_PANEL.w, ph = WIN_PANEL.h, x0 = Math.round((LOW_W - pw) / 2), y0 = Math.round((LOW_H - ph) / 2), cx = LOW_W / 2;
-  R(x0 + 2, y0 + 2, pw, ph, PAL.ink); box(x0, y0, pw, ph, PAL.deepnavy); R(x0 + 1, y0 + 1, pw - 2, 1, PAL.lilac);
-  drawTextC('INTO THE BIN!', cx, y0 + 10, 2, PAL.yellow);
-  drawTextC('REVENGE IS SERVED CLEAN.', cx, y0 + 30, 1, PAL.sky);
-  drawTextC('TIME   ' + fmtTime(game.time), cx, y0 + 48, 2, PAL.white);
-  drawTextC('FALLS  ' + game.falls, cx, y0 + 68, 2, PAL.white);
-  drawTextC('SHOTS  ' + game.shots, cx, y0 + 88, 1, PAL.silver);
-  if (DIRT_LOOK) {
-    const d = dirtOf(game);
-    drawTextC('SOAP: ' + (d < 0.2 ? 'SQUEAKY CLEAN' : d < 0.6 ? 'A BIT GRUBBY' : 'FILTHY BUT PROUD'), cx, y0 + 100, 1, PAL.cream);
+// ---------- win screen: your run and a name to save it under (left), the leaderboard (right) ----------
+// The board is local for now (scores.js). Type a name (letters, digits), Enter or SAVE SCORE saves it.
+const WIN = { name: '', saved: false, entry: null, scores: [] };
+
+function openWinScreen(game) {
+  WIN.name = lastName().toUpperCase().slice(0, NAME_MAX);
+  WIN.saved = false; WIN.entry = null;
+  WIN.scores = loadScores();
+}
+
+function saveWinEntry(game) {
+  if (WIN.saved) return false;
+  const name = WIN.name.trim() || 'SOAP';
+  WIN.entry = { name: name, time: Math.round(game.time * 100) / 100, falls: game.falls, shots: game.shots, date: Date.now() };
+  addScore(WIN.entry);
+  rememberName(name);
+  WIN.saved = true;
+  WIN.scores = loadScores();
+  return true;
+}
+
+// Keys on the win screen. Before saving they type the name; after, Enter plays again and Esc goes to the title.
+function winKey(game, key) {
+  if (WIN.saved) {
+    if (key === 'Enter' || key === ' ') startGame();
+    else if (key === 'Escape') backToTitle();
+    return;
   }
+  if (key === 'Enter') { if (saveWinEntry(game)) playSound('click'); }
+  else if (key === 'Backspace') WIN.name = WIN.name.slice(0, -1);
+  else if (/^[a-z0-9 ]$/i.test(key) && WIN.name.length < NAME_MAX && !(key === ' ' && !WIN.name)) WIN.name += key.toUpperCase();
+}
+
+function card(r) { R(r.x + 2, r.y + 2, r.w, r.h, PAL.ink); box(r.x, r.y, r.w, r.h, PAL.deepnavy); R(r.x + 1, r.y + 1, r.w - 2, 1, PAL.lilac); }
+
+function drawWin(game, input) {
+  L.globalAlpha = 0.6; R(0, 0, LOW_W, LOW_H, PAL.ink); L.globalAlpha = 1;   // soft shade over the world
+  drawTextC('INTO THE BIN!', LOW_W / 2, 6, 2, PAL.yellow);
+
+  const a = WIN_LEFT, ax = a.x + 8;                                       // your run
+  card(a);
+  drawText('YOUR CLIMB', ax, a.y + 6, 1, PAL.sky);
+  drawText(fmtTime(game.time), ax, a.y + 18, 2, PAL.white);
+  drawText('FALLS ' + game.falls, ax, a.y + 38, 1, PAL.cream);
+  drawText('SHOTS ' + game.shots, ax + 64, a.y + 38, 1, PAL.cream);
+  drawText(WIN.saved ? 'SAVED AS' : 'TYPE YOUR NAME', ax, a.y + 56, 1, PAL.silver);
+  box(ax, a.y + 66, a.w - 16, 15, WIN.saved ? PAL.deepnavy : PAL.ink);
+  drawText(WIN.saved ? WIN.entry.name : WIN.name, ax + 4, a.y + 70, 1, PAL.white, true);
+  if (!WIN.saved) {
+    if (Math.floor(now() * 2) % 2 && WIN.name.length < NAME_MAX) R(ax + 4 + WIN.name.length * 6, a.y + 70, 5, 7, PAL.yellow);   // cursor
+    drawButton(WIN_SAVE_BTN, 'SAVE SCORE', 1, hovering(input, WIN_SAVE_BTN));
+  } else {
+    const place = WIN.scores.indexOf(WIN.scores.find(function (e) { return e.date === WIN.entry.date && e.time === WIN.entry.time; }));
+    drawTextC(place >= 0 ? 'PLACE ' + (place + 1) + ' OF ' + WIN.scores.length : 'SAVED', a.x + a.w / 2, WIN_SAVE_BTN.y + 4, 1, PAL.yellow);
+  }
+
+  const b = WIN_RIGHT, bx = b.x + 6;                                      // the board
+  card(b);
+  drawText('BEST CLIMBS', bx, b.y + 6, 1, PAL.sky);
+  drawText('THIS PC', b.x + b.w - 6 - textWidth('THIS PC', 1), b.y + 6, 1, PAL.slate);
+  drawText('NAME', bx + 14, b.y + 18, 1, PAL.slate);
+  drawText('TIME', bx + 76, b.y + 18, 1, PAL.slate);
+  drawText('FALL', bx + 110, b.y + 18, 1, PAL.slate);
+  R(bx, b.y + 27, b.w - 12, 1, PAL.navy);
+  if (!WIN.scores.length) drawTextC('NO CLIMBS YET', b.x + b.w / 2, b.y + 50, 1, PAL.silver);
+  WIN.scores.slice(0, SCORES_SHOWN).forEach(function (e, i) {
+    const y = b.y + 31 + i * 10, mine = WIN.entry && e.date === WIN.entry.date && e.time === WIN.entry.time;
+    if (mine) R(bx - 2, y - 2, b.w - 8, 10, PAL.navy);
+    const c = mine ? PAL.yellow : i === 0 ? PAL.cream : PAL.white;
+    drawText((i + 1) + '.', bx, y, 1, PAL.slate, true);
+    drawText(String(e.name).slice(0, NAME_MAX), bx + 14, y, 1, c, true);
+    drawText(fmtTime(e.time), bx + 76, y, 1, c, true);
+    drawText(String(e.falls), bx + 110, y, 1, c, true);
+  });
+
   drawButton(WIN_BTN, 'PLAY AGAIN', 2, hovering(input, WIN_BTN));
+  drawButton(WIN_MENU_BTN, 'TITLE MENU', 2, hovering(input, WIN_MENU_BTN));
 }
 
 // Esc menu: the world stays frozen behind a dark see-through layer. The surface guide sits between the buttons.

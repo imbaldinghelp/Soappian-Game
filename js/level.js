@@ -40,7 +40,7 @@ const LEVEL = {
     { name: 'Dustbin',     top: 111 * TILE_PX, bottom: 139 * TILE_PX, spawn: at(4, 138),   bg: ['#7f76a3', '#6f6694', '#9d95c2', '#5e5582'] },
     { name: 'Floor tiles', top: 85 * TILE_PX,  bottom: 111 * TILE_PX, spawn: at(11, 110),  bg: ['#7cc4a4', '#6ab394', '#a2dcc0', '#589c80'] },
     { name: 'Toilet',      top: 53 * TILE_PX,  bottom: 85 * TILE_PX,  spawn: at(13.5, 85), bg: ['#a48fc9', '#9480bb', '#c2b0e0', '#7d6aa6'] },
-    { name: 'Towel rack',  top: 28 * TILE_PX,  bottom: 53 * TILE_PX,  spawn: at(4, 52),    bg: ['#7d97dc', '#6c84cc', '#a3b8ee', '#5a70b8'] },
+    { name: 'Towel rack',  top: 28 * TILE_PX,  bottom: 53 * TILE_PX,  spawn: at(5, 52),    bg: ['#7d97dc', '#6c84cc', '#a3b8ee', '#5a70b8'] },
     { name: 'Sink',        top: 0,             bottom: 28 * TILE_PX,  spawn: at(10, 28),   bg: ['#c4a9de', '#b597d2', '#e2cdf0', '#9a7fbd'] },
   ],
 
@@ -65,9 +65,9 @@ const LEVEL = {
     // slide off up there and it is a long drop.
     plat(9, 110, 4, 'ceramic'),
     plat(9, 109, 1, 'ceramic', { h: 1 }),   // wall on the left end
-    plat(3, 107, 4, 'ceramic'),
-    plat(3, 106, 1, 'ceramic', { h: 1 }),   // wall on the left end
-    plat(7, 103, 3, 'ceramic'),
+    plat(4, 107, 4, 'ceramic'),
+    plat(4, 106, 1, 'ceramic', { h: 1 }),   // wall on the left end (left of it stays clear: the pump soap's way down)
+    plat(8, 103, 3, 'ceramic'),
     plat(13, 99, 3, 'ceramic'),
     plat(19, 96, 3, 'ceramic'),
     plat(24, 92, 4, 'ceramic'),
@@ -76,13 +76,13 @@ const LEVEL = {
     // ---- Zone 3: toilet. TOILET SEAT (2.5 bars) and WET (5 bars). (rows 53 to 84) ----
     // Mostly seat, narrow and far apart. Wet slides almost forever: land where it runs into seat or a wall.
     plat(12, 85, 4, 'seat'),                // rest point at the bottom of the zone
-    plat(8, 82, 2, 'seat'),
-    plat(1, 78, 1, 'wet', { h: 1 }),        // toilet bowl, left side
-    plat(2, 79, 4, 'seat'),                 // toilet bowl, bottom
-    plat(6, 78, 1, 'wet', { h: 1 }),        // toilet bowl, right side
-    plat(9, 76, 2, 'seat'),
-    plat(13, 72, 2, 'wet'), plat(15, 72, 3, 'seat'),   // land on the wet end, slide onto the seat
-    plat(17, 71, 1, 'seat', { h: 1 }),      // wall on the right end
+    plat(10, 82, 2, 'seat'),
+    plat(4, 78, 1, 'wet', { h: 1 }),        // toilet bowl, left side (left of it stays clear: the pump soap's way down)
+    plat(5, 79, 4, 'seat'),                 // toilet bowl, bottom
+    plat(9, 78, 1, 'wet', { h: 1 }),        // toilet bowl, right side
+    plat(11, 76, 2, 'seat'),
+    plat(14, 72, 2, 'wet'), plat(16, 72, 3, 'seat'),   // land on the wet end, slide onto the seat
+    plat(18, 71, 1, 'seat', { h: 1 }),      // wall on the right end
     plat(21, 68, 2, 'seat'),
     plat(25, 63, 1, 'seat', { h: 1 }),      // wet trough against the wall: hop over the lip
     plat(26, 64, 3, 'wet'),
@@ -92,7 +92,7 @@ const LEVEL = {
 
     // ---- Zone 4: towel rack. TOWEL (1 bar), with wet. (rows 28 to 52) ----
     // Towel grips, so the ledges are short and far apart: right across the level, then back left.
-    plat(3, 52, 2, 'towel'),
+    plat(4, 52, 2, 'towel'),
     plat(8, 49, 1.5, 'towel'),
     plat(13, 46, 1.5, 'towel'),
     plat(18, 43, 1.5, 'towel'),
@@ -118,21 +118,24 @@ const LEVEL = {
     plat(0, 0, 29, 'wall'),                 // ceiling
   ],
 
-  // Slides: yellow chutes in the gaps under the hard jumps. They only catch from above and fling the soap
-  // off the low end, so a missed jump does not just drop back onto the ledge it came from.
+  // Slides: yellow chutes in the open gap of a hard jump, where a miss falls. Never right under a ledge (it
+  // would hide them) and lower than both ends of the jump (a good jump never touches one). They only catch
+  // from above and fling the soap off the low end, away from the ledge it would otherwise land on.
   slides: [
-    slide(22, 122, 19, 124),
-    slide(17, 91, 21, 93),
-    slide(16, 63, 12, 65),
-    slide(19, 64, 23, 66),
-    slide(23, 36, 19, 38),
-    slide(17, 20, 13, 22),
-    slide(24, 11, 20, 13),
+    slide(20, 121, 17, 123),                // zone 1: missed the jump back left, off towards the bin
+    slide(11.2, 104, 13, 105.5),            // zone 2: short of the right hand climb, past the first ledge
+    slide(21.5, 93, 24, 94.5),              //   under the turn: off down the right side
+    slide(23, 65, 24.8, 66.5),              // zone 3: short of the trough, under it and down
+    slide(19.5, 63, 16, 64.5),              //   short of the climb back left, over the runway
+    slide(17.5, 50, 15, 51.5),              // zone 4: between the first towels, back down the toilet
+    slide(23, 37, 26, 38.5),                //   short of the long leap left, down the right side
+    slide(20, 35, 17, 36.5),                //   between the last towels
+    slide(24, 11.5, 26, 13),                // zone 5: short of the ledge before the runway, down the right side
   ],
 
   // Scenery, drawn behind the soap. A little board marks where each new material first turns up.
   decor: [
-    deco('bin', 4, 138, { w: 4, h: 4 }), deco('paperball', 8.5, 138), deco('paperball', 13.5, 138),
+    deco('bin', 4, 138, { w: 6, h: 4 }), deco('paperball', 8.5, 138), deco('paperball', 13.5, 138),
     deco('plant', 25.5, 138), deco('peel', 18, 138),
     deco('sign', 6, 131.9, { text: 'SURFACE MANUAL: PRESS ESC', wall: true }),
     deco('material', 6, 133.3, { text: 'plastic' }),
@@ -140,7 +143,7 @@ const LEVEL = {
     deco('material', 8, 112.6, { text: 'ceramic' }),
 
     deco('material', 5.5, 86.6, { text: 'seat' }), deco('material', 24.5, 86.6, { text: 'wet' }),
-    deco('lid', 4, 79, { w: 3, h: 3 }),
+    deco('lid', 7, 79, { w: 3, h: 3 }),
 
     deco('material', 9, 53.6, { text: 'towel' }),
     deco('window', 24, 48, { w: 4, h: 4 }),
@@ -161,9 +164,9 @@ const LEVEL = {
 function buildSolids() {
   const out = [];
   for (const b of LEVEL.blocks) out.push({ x: b.x, y: b.y, w: b.w, h: b.h, surface: b.surface, push: b.push });
-  // world edges (bouncy walls)
-  out.push({ x: -400, y: -800, w: 400, h: WORLD_H + 1600, surface: 'wall', push: 0 });
-  out.push({ x: WORLD_W, y: -800, w: 400, h: WORLD_H + 1600, surface: 'wall', push: 0 });
-  out.push({ x: -400, y: -800, w: WORLD_W + 800, h: 800, surface: 'wall', push: 0 });
+  // world edges (bouncy walls for the soap; the flung pump soap just slides down them, see ragCollide)
+  out.push({ x: -400, y: -800, w: 400, h: WORLD_H + 1600, surface: 'wall', push: 0, edge: true });
+  out.push({ x: WORLD_W, y: -800, w: 400, h: WORLD_H + 1600, surface: 'wall', push: 0, edge: true });
+  out.push({ x: -400, y: -800, w: WORLD_W + 800, h: 800, surface: 'wall', push: 0, edge: true });
   return out;
 }

@@ -21,10 +21,12 @@ const flags = { debug: false, map: false };
 
 // Camera: soap sits a bit low on screen so there is more room to see where it is going.
 // Stays inside the level. VIEW_WORLD_W / H come from PIXEL in config.js (bigger PIXEL = further away).
+// After the win it follows the flung pump soap down instead.
 function cameraTarget() {
-  const s = game.soap;
-  const x = s.x + s.w / 2 - VIEW_WORLD_W / 2;
-  const y = s.y + s.h / 2 - VIEW_WORLD_H * 0.62;
+  const s = game.soap, rag = game.rag && game.rag.bottle;
+  const fx = rag ? rag.x : s.x + s.w / 2, fy = rag ? rag.y : s.y + s.h / 2;
+  const x = fx - VIEW_WORLD_W / 2;
+  const y = fy - VIEW_WORLD_H * (rag ? 0.5 : 0.62);
   return {
     x: Math.max(0, Math.min(WORLD_W - VIEW_WORLD_W, x)),
     y: Math.max(0, Math.min(WORLD_H - VIEW_WORLD_H, y)),
@@ -100,7 +102,12 @@ canvas.addEventListener('pointerdown', function (e) {
     else if (inButton(p, MENU_BTN)) { playSound('click'); backToTitle(); }
     return;
   }
-  if (game.state === 'won') { if (inButton(p, WIN_BTN)) { playSound('click'); startGame(); } return; }
+  if (game.state === 'won') {
+    if (inButton(p, WIN_BTN)) { playSound('click'); startGame(); }
+    else if (inButton(p, WIN_MENU_BTN)) { playSound('click'); backToTitle(); }
+    else if (inButton(p, WIN_SAVE_BTN) && saveWinEntry(game)) playSound('click');
+    return;
+  }
   if (game.state !== 'play') return;
   if (inButton(p, RESTART_BTN)) { playSound('click'); startGame(); return; }
   if (inButton(p, SOUND_BTN)) { toggleMute(); playSound('click'); return; }
@@ -120,31 +127,48 @@ canvas.addEventListener('pointermove', function (e) {
 });
 canvas.addEventListener('pointerleave', function () { input.hx = input.hy = -1; });
 
+// What became of the last let-go (the debug overlay shows it): fired, waiting for touchdown, or why not.
+const release = { what: '-', at: 0, ms: 0 };
+function noteRelease(what) { release.what = what; release.at = performance.now(); release.ms = 0; }
+
 function endAim(fire) {
   if (!input.aiming) return;
   input.aiming = false;
   if (!fire || game.state !== 'play') return;
-  const dir = aimDirection(input);
-  if (!dir) return;                                                  // too short a drag cancels the shot
-  if (game.soap.canAim) launch(game, dir.x, dir.y);
-  else input.queued = { x: dir.x, y: dir.y, p: game.meter.p, t: SHOT_BUFFER };   // fires on touchdown
+  const dir = aimDirection(input), s = game.soap;
+  if (!dir) { noteRelease('TOO SHORT'); return; }                    // too short a drag cancels the shot
+  if (s.flopT > 0) {                                                 // still dazed: no shot, and show it
+    noteRelease('DAZED');
+    fxBurst('dust', s.x + s.w / 2, s.y, 6, PAL.slate);
+    return;
+  }
+  if (s.canAim) { launch(game, dir.x, dir.y); noteRelease('FIRED'); }
+  else { input.queued = { x: dir.x, y: dir.y, p: game.meter.p, t: SHOT_BUFFER }; noteRelease('IN AIR'); }   // fires on touchdown
 }
 
 // A shot let go in the air fires the moment the soap touches a surface, if that is soon enough.
 function updateQueuedShot(dt) {
   const q = input.queued;
   if (!q) return;
-  if (game.soap.canAim) { game.meter.p = q.p; launch(game, q.x, q.y); input.queued = null; }
-  else if ((q.t -= dt) <= 0) input.queued = null;
+  if (game.soap.canAim) {
+    game.meter.p = q.p; launch(game, q.x, q.y); input.queued = null;
+    release.what = 'FIRED ON TOUCHDOWN'; release.ms = Math.round(performance.now() - release.at);
+  } else if ((q.t -= dt) <= 0) { input.queued = null; release.what = 'MISSED TOUCHDOWN'; }
 }
-canvas.addEventListener('pointerup', function (e) { const p = pointerPos(e); input.x = p.x; input.y = p.y; endAim(true); });
+function releaseAt(e) { const p = pointerPos(e); input.x = p.x; input.y = p.y; endAim(true); }
+canvas.addEventListener('pointerup', releaseAt);
 canvas.addEventListener('pointercancel', function () { endAim(false); });
+// Backups so a let-go is never lost: the browser can drop the pointer capture (alt-tab, leaving the window,
+// some trackpads), and then the canvas never hears the release and the aim hangs until the next click.
+canvas.addEventListener('lostpointercapture', function (e) { if (input.aiming) releaseAt(e); });
+window.addEventListener('pointerup', function (e) { if (input.aiming) releaseAt(e); });
 window.addEventListener('blur', function () { input.aiming = false; });
 canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
 
 window.addEventListener('keydown', function (e) {
   const k = e.key.toLowerCase();
   unlockAudio();
+  if (game.state === 'won') { winKey(game, e.key); return; }        // typing a name for the leaderboard
   if (game.state === 'title' && (k === 'enter' || k === ' ')) { playIntro(); return; }
   if (game.state === 'intro' && (k === 'enter' || k === ' ' || k === 'escape')) { startGame(); return; }
   if (k === 'escape') {                                              // Esc opens and closes the menu
@@ -223,7 +247,7 @@ function update(dt) {
   if (game.state === 'winning' || game.state === 'won') updateRagdoll(game, dt);   // the pump soap tumbles on
   if (game.state === 'winning') {
     game.winT += dt;
-    if (game.winT > WIN_WATCH) { game.state = 'won'; input.aiming = false; }
+    if (game.winT > WIN_WATCH) { game.state = 'won'; input.aiming = false; openWinScreen(game); }
   }
   handleEvents();
   fxUpdate(game, dt);
@@ -237,9 +261,14 @@ function update(dt) {
   game.cam.y += (t.y - game.cam.y) * k;
 }
 
+// PERF: frames per second and the slowest frame in the last second (debug overlay), to track down stutter.
+const PERF = { fps: 0, worst: 0, n: 0, slow: 0, t0: performance.now() };
 let last = performance.now(), acc = 0;
 function frame(nowMs) {
-  acc += Math.min(0.1, (nowMs - last) / 1000);
+  const gap = nowMs - last;
+  PERF.n++; PERF.slow = Math.max(PERF.slow, gap);
+  if (nowMs - PERF.t0 >= 1000) { PERF.fps = PERF.n; PERF.worst = Math.round(PERF.slow); PERF.n = 0; PERF.slow = 0; PERF.t0 = nowMs; }
+  acc += Math.min(0.1, gap / 1000);
   last = nowMs;
   while (acc >= DT) { update(DT); acc -= DT; }
   drawFrame(game, input, flags);
