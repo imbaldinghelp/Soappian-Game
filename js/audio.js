@@ -84,20 +84,12 @@ function hiss(filter, freq, q, dur, vol, delay, freqEnd) {
 }
 
 // ---------- the sounds ----------
-// strength is 0 to 1 (launch power, landing speed). surface is the surface landed on.
+// strength is 0 to 1 (launch power, hit speed). surface is the surface landed on.
 const SYNTH = {
   jump: function (p) {                                   // soapy "bloop": a squeeze, then a rising bubble
     hiss('bandpass', 900 + 900 * p, 2, 0.07, 0.25 + 0.2 * p);
     tone('sine', 160 + 140 * p, 520 + 700 * p, 0.13, 0.35 + 0.25 * p);
     tone('triangle', 700 + 600 * p, 1500 + 900 * p, 0.05, 0.12, 0.09);
-  },
-  land: function (p, surface) {
-    const v = 0.08 + 0.35 * p;
-    if (surface === 'towel' || surface === 'paper') { hiss('lowpass', 500, 1, 0.08, v * 0.8); return; }
-    tone('sine', 150, 60, 0.08, v);
-    if (surface === 'wet' || surface === 'mirror') hiss('bandpass', 2400, 1.5, 0.14, v * 0.8);   // splish
-    else if (surface === 'metal') tone('square', 1900, 1700, 0.05, v * 0.25);                      // tink
-    else hiss('lowpass', 1200, 1, 0.05, v * 0.6);
   },
   flop: function () {                                    // a wet bar of soap hitting the floor flat
     tone('sine', 130, 45, 0.18, 0.6);
@@ -183,9 +175,9 @@ function playSound(name, strength, surface) {
     const src = AUDIO.ctx.createBufferSource();
     src.buffer = buf;
     if (name === 'jump') src.playbackRate.value = 0.85 + 0.4 * (strength || 0);   // higher pitch for harder shots
-    if (name === 'flop') src.playbackRate.value = 0.75;                            // the landing sound, but heavier
+    if (name === 'flop') src.playbackRate.value = 0.75;                            // played lower: a heavy flop
     const g = AUDIO.ctx.createGain();
-    g.gain.value = name === 'land' || name === 'bounce' || name === 'bonk' ? 0.25 + 0.75 * (strength || 0) : 1;
+    g.gain.value = name === 'bounce' || name === 'bonk' ? 0.25 + 0.75 * (strength || 0) : 1;
     src.connect(g); g.connect(AUDIO.master);
     src.start();
     return;

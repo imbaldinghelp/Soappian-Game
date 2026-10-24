@@ -170,8 +170,7 @@ function handleEvents() {
       fxBurst('bubble', d.x, d.y, 4 + Math.round(d.p * 6), PAL.white);
     } else if (ev.type === 'land') {
       const k = Math.min(1, d.speed / MAX_SPEED);
-      if (d.speed < LAND_ABSORB) continue;
-      playSound('land', k, d.surface);
+      if (d.speed < LAND_ABSORB) continue;                          // landings are silent: dust only
       fxBurst(d.surface === 'wet' || d.surface === 'mirror' ? 'drop' : 'dust', d.x, d.y, 3 + Math.round(k * 8),
         d.surface === 'wet' || d.surface === 'mirror' ? PAL.sky : PAL.silver);
       if (k > 0.7) fxShake(0.12);
@@ -229,7 +228,7 @@ function update(dt) {
   handleEvents();
   fxUpdate(game, dt);
   setWind(FX.wind);
-  const g = game.soap.ground;                                        // sliding on wet: a wet squeak that follows the speed
+  const g = game.soap.ground;                                        // sliding on wet: follows the speed
   setSlide(game.state === 'play' && g && g.surface === 'wet' ? Math.min(1, Math.abs(game.soap.vx) / SLIDE_FULL) : 0);
 
   const t = cameraTarget();

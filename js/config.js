@@ -128,8 +128,7 @@ const SLIDE_FULL = 900;                   // sliding on wet this fast (px/s) pla
 const USE_SOUND_FILES = true;             // false = synth placeholders only
 const SFX = 'assets/audio/SFX/SFX/';
 const SOUND_FILES = {
-  land: SFX + 'Hitting ground.mp3',       // every landing, louder the harder
-  flop: SFX + 'Hitting ground.mp3',       // landing flat after a fall (played lower and heavier)
+  flop: SFX + 'Hitting ground.mp3',       // landing flat after a fall (played lower and heavier). Ordinary landings are silent
   win: SFX + 'Hitting pump soap.mp3',     // knocking the pump soap over
   wind: SFX + 'falling.mp3',              // loops while free falling (replaces the synth wind)
   slide: SFX + 'sliding on wet.mp3',      // loops while sliding on wet

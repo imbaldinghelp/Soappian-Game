@@ -29,7 +29,8 @@ Flow: title screen -> intro cutscene (pump shoves the soap off the sink into the
 - js/soap.js: physics, meter, launch, falls, win, the pump ragdoll. No drawing, no DOM.
   Pushes events (launch, land, bounce, flop, getup, win, bonk) onto game.events instead of playing sounds
 - js/audio.js: sound effects. The team's recordings (assets/audio, SOUND_FILES in config.js), synth placeholders for
-  the rest. 'wind' (free fall) and 'slide' (sliding on wet) are loops whose volume follows the action
+  the rest. 'wind' (free fall) and 'slide' (sliding on wet) are loops whose volume follows the action.
+  Ordinary landings make no sound (dust only); a flop does
 - js/draw.js: the world, drawn straight on the 320x180 page canvas (soft 8-bit style): pixel font, platforms by surface, wall bands,
   scenery (DECO), pump, soap, particles (FX), aim and meter, and drawFrame which puts a frame together
 - js/screens.js: drawn on top of the world: title, intro cutscene (updateIntro + drawIntro), HUD,
