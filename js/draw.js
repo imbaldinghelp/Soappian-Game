@@ -31,9 +31,25 @@ function loadArt() {
   if (!USE_ART) return;
   Object.keys(ART).forEach(function (k) {
     const im = new Image();
-    im.onload = function () { IMAGES[k] = im; };
+    im.onload = function () { im.box = opaqueBox(im); IMAGES[k] = im; };
     im.src = ART[k];
   });
+}
+
+// The part of a picture that is not see-through, {x, y, w, h}: sprites are drawn so this part lines up.
+function opaqueBox(im) {
+  const c = document.createElement('canvas');
+  c.width = im.width; c.height = im.height;
+  const g = c.getContext('2d');
+  g.drawImage(im, 0, 0);
+  const d = g.getImageData(0, 0, im.width, im.height).data;
+  let x0 = im.width, y0 = im.height, x1 = -1, y1 = -1;
+  for (let y = 0; y < im.height; y++) {
+    for (let x = 0; x < im.width; x++) {
+      if (d[(y * im.width + x) * 4 + 3] > 0) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+    }
+  }
+  return x1 < 0 ? { x: 0, y: 0, w: im.width, h: im.height } : { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
 }
 
 // ---------- tiny helpers (all in art pixels) ----------
@@ -229,11 +245,14 @@ const GUIDE_W = 112, GUIDE_H = 16 + MATERIALS.length * 10, SIGN_H = 14;
 
 // One row: a little ledge in the material's colour, its name, its slippery bars (halves too), its zone.
 function drawMaterialRow(x0, ry, key) {
-  const sf = SURFACES[key], z = firstZones()[key];
-  R(x0 + 5, ry, 14, 7, sf.edge); R(x0 + 6, ry + 1, 12, 5, sf.body);
-  R(x0 + 6, ry + 1, 12, 1, sf.light); R(x0 + 6, ry + 2, 12, 1, sf.cap);
-  if (sf.slip <= 1) for (let t = 1; t < 12; t += 3) R(x0 + 6 + t, ry - 1, 1, 1, sf.cap);
-  else if (sf.slip >= 3) R(x0 + 9, ry + 1, 3, 1, '#ffffff');
+  const sf = SURFACES[key], z = firstZones()[key], img = IMAGES[key];
+  if (img) L.drawImage(img, 0, 0, 14, 7, x0 + 5, ry, 14, 7);           // a little piece of the real tile
+  else {
+    R(x0 + 5, ry, 14, 7, sf.edge); R(x0 + 6, ry + 1, 12, 5, sf.body);
+    R(x0 + 6, ry + 1, 12, 1, sf.light); R(x0 + 6, ry + 2, 12, 1, sf.cap);
+    if (sf.slip <= 1) for (let t = 1; t < 12; t += 3) R(x0 + 6 + t, ry - 1, 1, 1, sf.cap);
+    else if (sf.slip >= 3) R(x0 + 9, ry + 1, 3, 1, '#ffffff');
+  }
   drawText(sf.name, x0 + 23, ry, 1, PAL.white);
   for (let j = 0; j < 5; j++) {
     const fill = Math.max(0, Math.min(1, sf.slip - j));
@@ -292,7 +311,13 @@ const DECO = {
     R(x0 + 3, top + 2, d.w - 6, 1, d.bg[2]);
     [x0 + 8, x0 + d.w - 14].forEach(function (fx) { R(fx, y - 5, 6, 5, d.bg[3]); });
   },
-  bin: function (x, y, d) {                             // inside of the dustbin, between its walls
+  bin: function (x, y, d) {                             // the dustbin, between its walls
+    const img = IMAGES.bin;
+    if (img) {                                           // Aaron's bin, scaled up by a whole number to fill the space
+      const b = img.box, k = Math.max(1, Math.floor(Math.min(d.w / b.w, d.h / b.h)));
+      L.drawImage(img, b.x, b.y, b.w, b.h, x - Math.round(b.w * k / 2), y - b.h * k, b.w * k, b.h * k);
+      return;
+    }
     const x0 = x - Math.round(d.w / 2), top = y - d.h;
     R(x0, top, d.w, d.h, d.bg[3]);
     R(x0 - 12, top - 2, d.w + 24, 2, SURFACES.plastic.cap);              // rim
@@ -368,6 +393,11 @@ function drawDeco(d, vx0, vy0, vx1, vy1) {
 // ---------- the pump soap ----------
 // mood: 'smug' (default), 'push' (gritted, angry brows), 'talk' (mouth open)
 function drawPumpSprite(x, y, mood) {                                    // 24 x 40 pixels, top-left at (x, y)
+  const img = IMAGES.pump;
+  if (img) {                                       // Aaron's art (one face for every mood), its feet on the ground
+    L.drawImage(img, x, y + img.height - (img.box.y + img.box.h));
+    return;
+  }
   box(x + 4, y + 1, 13, 5, PAL.white);            // pump head
   box(x + 16, y + 2, 8, 4, PAL.white);            // nozzle
   box(x + 8, y + 5, 6, 7, PAL.white);             // neck
@@ -391,9 +421,7 @@ function drawPumpSprite(x, y, mood) {                                    // 24 x
 // The pump sprite cut into its ragdoll pieces (RAG_PIECES in soap.js), knocked silly.
 function pumpPiece(k) {
   const pc = RAG_PIECES[k], img = IMAGES.pump, w = px(LEVEL.pump.w);
-  return spriteOf('pump-' + k + (img ? '-art' : ''), w, pc.h, function () {
-    if (img) L.drawImage(img, 0, -pc.top); else drawPumpSprite(0, -pc.top, 'ko');
-  });
+  return spriteOf('pump-' + k + (img ? '-art' : ''), w, pc.h, function () { drawPumpSprite(0, -pc.top, 'ko'); });
 }
 
 function drawPump(game) {
@@ -409,8 +437,7 @@ function drawPump(game) {
     return;
   }
   const x = px(game.pump.x), y = px(game.pump.y);
-  const img = IMAGES.pump;
-  if (img) L.drawImage(img, x, y); else drawPumpSprite(x, y, game.pumpMood);   // pumpMood is set by the intro
+  drawPumpSprite(x, y, game.pumpMood);                                    // pumpMood is set by the intro
 }
 
 // ---------- the soap ----------
@@ -418,9 +445,15 @@ function drawPump(game) {
 function shownDirt(game) { return DIRT_LOOK ? dirtOf(game) : 0; }
 function soapColor(dirt) { return dirt < 0.25 ? PAL.yellow : dirt < 0.5 ? PAL.orange : dirt < 0.8 ? PAL.brown : PAL.slate; }
 
-// The soap bar, about 16 x 12 pixels with its top-left at (x, y). face: 'smile', 'happy', 'shock', 'angry',
+// The soap bar, SOAP_W x SOAP_H (23 x 12 art pixels) with its top-left at (x, y). face: 'smile', 'happy', 'shock', 'angry',
 // 'glum' or 'ko' (dazed after a fall). (lx, ly) is where the eyes look (-1 to 1). The title screen draws it too.
 function drawSoapSprite(x, y, w, h, dirt, face, lx, ly) {
+  const img = IMAGES.soap;
+  if (img) {                                       // Aaron's art: its bar fills (x, y, w, h), squashed with it
+    const b = img.box, kx = w / b.w, ky = h / b.h;
+    L.drawImage(img, Math.round(x - b.x * kx), Math.round(y - b.y * ky), Math.round(img.width * kx), Math.round(img.height * ky));
+    return;
+  }
   roundBox(x, y, w, h, soapColor(dirt));
   R(x + 3, y + 1, 4, 1, dirt < 0.5 ? PAL.white : PAL.silver);            // shine
   R(x + 2, y + h - 2, w - 4, 1, dirt < 0.25 ? PAL.orange : PAL.brown);   // shade
@@ -450,15 +483,10 @@ function drawSoapSprite(x, y, w, h, dirt, face, lx, ly) {
 function drawSoap(game, aim) {
   const s = game.soap;
   const dirt = shownDirt(game);
-  const SW = px(SOAP_W), SH = px(SOAP_H);                                // 16 x 12 art pixels
+  const SW = px(SOAP_W), SH = px(SOAP_H);                                // 23 x 12 art pixels
   const w = SW + Math.round(s.sq * 10), h = SH - Math.round(s.sq * 6);    // squash and stretch
   const cx = px(s.x) + Math.round(SW / 2), bottom = px(s.y + s.h);
   const x = cx - Math.round(w / 2), y = bottom - h;
-  const img = IMAGES.soap;
-  if (img) {
-    L.drawImage(img, x, bottom - SH);
-    return { x: px(s.x), y: bottom - SH, w: SW, h: SH };
-  }
   let lx = 0, ly = 0;                                                    // eyes look where the soap aims or goes
   if (aim) { lx = aim.x; ly = aim.y; }
   else { const sp = Math.sqrt(s.vx * s.vx + s.vy * s.vy); if (sp > 30) { lx = s.vx / sp; ly = s.vy / sp; } }

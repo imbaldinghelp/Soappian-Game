@@ -29,7 +29,7 @@ const PAL = {
 // ---- Soap physics ----
 // Pace: GRAVITY and the launch speeds go together. Speeds x k with GRAVITY x k^2 keeps the same arcs,
 // just k times faster (these are the old values sped up 1.3x).
-const SOAP_W = 16 * PIXEL;               // hitbox: 16 x 12 art pixels (96 x 72 world px), one tile wide
+const SOAP_W = 23 * PIXEL;               // hitbox: 23 x 12 art pixels, the bar in Aaron's soap.png (138 x 72 world px)
 const SOAP_H = 12 * PIXEL;
 const GRAVITY = 3040;                     // px/s^2
 const MIN_SPEED = 455;                    // launch speed at meter 0 (px/s)
@@ -74,16 +74,17 @@ const WIND_VOLUME = 0.35;                 // loudness of the wind at full speed,
 
 // ---- Surfaces: five materials, one new one per zone. Colour tells you the material. ----
 // slip = how slippery, in bars (the manual in the Esc menu and the little boards show it). friction is what the
-// physics uses: lower = slides further. Same material, same colour, same feel.
+// physics uses: lower = slides further. Same material, same colour, same feel. The colours match Aaron's tiles
+// (used when a tile PNG is missing, and for the little ledges in the manual).
 // Drawn like soft 8-bit ground: a cap on top (light row + cap colour), a body with gentle bands, a tinted edge.
 // 1 bar and less: fuzzy top. 3 bars and more: shiny top with a glint.
 const SURFACES = {
-  plastic: { name: 'PLASTIC', slip: 2,   friction: 0.50, bounce: 0.1, light: '#e0f7f0', cap: '#b5e6d8', body: '#93cfc0', band: '#7fbcad', edge: '#3e6b68' },  // mint
-  ceramic: { name: 'CERAMIC', slip: 3,   friction: 0.28, bounce: 0.1, light: '#ffffff', cap: '#ffffff', body: '#e3e8f3', band: '#cdd4e6', edge: '#6f7396' },  // white
-  wet:     { name: 'WET',     slip: 5,   friction: 0.06, bounce: 0.1, light: '#e3fbff', cap: '#9fe3f2', body: '#6cb4e0', band: '#5aa0cf', edge: '#2f5b8a' },  // blue
-  seat:    { name: 'SEAT',    slip: 2.5, friction: 0.38, bounce: 0.1, light: '#fffbe8', cap: '#fff2bf', body: '#f7dc8c', band: '#ecc96e', edge: '#8f7234' },  // butter
-  towel:   { name: 'TOWEL',   slip: 1,   friction: 0.85, bounce: 0.0, light: '#ffdbe7', cap: '#ffb7cf', body: '#f497b9', band: '#e57fa5', edge: '#9a4870' },  // pink
-  wall:    { name: 'WALL',    slip: 0,   friction: 0.20, bounce: 0.75, light: '#ffd0c6', cap: '#ffa596', body: '#f0857a', band: '#dc7066', edge: '#8c4450' },  // the ceiling and the level's sides
+  plastic: { name: 'PLASTIC', slip: 2,   friction: 0.50, bounce: 0.1, light: '#fcc999', cap: '#f8b67b', body: '#f6a35c', band: '#e08c47', edge: '#2b2c42' },  // orange
+  ceramic: { name: 'CERAMIC', slip: 3,   friction: 0.28, bounce: 0.1, light: '#ffffff', cap: '#faf8f3', body: '#f4f1ea', band: '#dcd8cf', edge: '#2b2c42' },  // white
+  wet:     { name: 'WET',     slip: 5,   friction: 0.06, bounce: 0.1, light: '#a9dff9', cap: '#7cc1ee', body: '#5aa9e6', band: '#4a92cf', edge: '#2b2c42' },  // blue
+  seat:    { name: 'SEAT',    slip: 2.5, friction: 0.38, bounce: 0.1, light: '#ffffff', cap: '#a9def9', body: '#f4f1ea', band: '#dcd8cf', edge: '#2b2c42' },  // white, blue rim
+  towel:   { name: 'TOWEL',   slip: 1,   friction: 0.85, bounce: 0.0, light: '#ece3d6', cap: '#e2d6c5', body: '#d8cbb8', band: '#c2b39e', edge: '#2b2c42' },  // beige
+  wall:    { name: 'WALL',    slip: 0,   friction: 0.20, bounce: 0.75, light: '#a3aebb', cap: '#8d99a7', body: '#7d8a99', band: '#6a7686', edge: '#2b2c42' },  // grey brick: the ceiling and the level's sides
 };
 const MATERIALS = ['plastic', 'ceramic', 'wet', 'seat', 'towel'];   // in the order they turn up, as the manual lists them
 
@@ -134,22 +135,19 @@ const SOUND_FILES = {
   slide: SFX + 'sliding on wet.mp3',      // loops while sliding on wet
 };
 
-// ---- Art: set USE_ART to true once Aaron's PNGs are in the assets folder ----
-// Sizes are in art pixels. They are drawn 1:1 on the 320 x 180 grid, so keep them small and crisp.
-const USE_ART = false;
+// ---- Art: Aaron's PNGs in assets/texture/ (sizes in art pixels, drawn 1:1 on the 320 x 180 grid) ----
+// Anything without a file here is drawn in code. Slots still to draw: bg0 to bg4 (320 x 180 zone backdrops,
+// repeated down the zone: bin, floor, toilet, towel, sink) and title (320 x 180 title backdrop).
+const USE_ART = true;                     // false = code-drawn shapes only
+const TEX = 'assets/texture/';
 const ART = {
-  soap: 'assets/soap.png',               // 16 x 12
-  pump: 'assets/pump_soap.png',          // 24 x 40
-  plastic: 'assets/tile_plastic.png',    // 16 x 16 each, tiles seamlessly (ledges are half a tile thick and show its top 8 rows)
-  ceramic: 'assets/tile_ceramic.png',
-  wet: 'assets/tile_wet.png',
-  seat: 'assets/tile_seat.png',
-  towel: 'assets/tile_towel.png',
-  wall: 'assets/tile_wall.png',          // the ceiling
-  bg0: 'assets/bg_bin.png',              // 320 x 180 each, repeated down the zone
-  bg1: 'assets/bg_floor.png',
-  bg2: 'assets/bg_toilet.png',
-  bg3: 'assets/bg_towel.png',
-  bg4: 'assets/bg_sink.png',
-  title: 'assets/title.png',             // 320 x 180 title screen backdrop (the logo is drawn on top)
+  soap: TEX + 'soap.png',                 // 24 x 16 (the bar inside it is the hitbox, SOAP_W x SOAP_H)
+  pump: TEX + 'pump_soap.png',            // 24 x 40 (rows 0 to 10 come off as the head when it is knocked over)
+  bin: TEX + 'prop_bin.png',              // the dustbin, scaled up to fill the space between the bin walls
+  plastic: TEX + 'tile_plastic.png',      // 16 x 16 each, tiles seamlessly (ledges are half a tile thick and show its top 8 rows)
+  ceramic: TEX + 'tile_ceramic.png',
+  wet: TEX + 'tile_wet.png',
+  seat: TEX + 'tile_seat.png',
+  towel: TEX + 'tile_towel.png',
+  wall: TEX + 'tile_wall.png',            // the ceiling
 };

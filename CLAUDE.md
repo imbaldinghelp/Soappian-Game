@@ -43,8 +43,10 @@ Flow: title screen -> intro cutscene (pump shoves the soap off the sink into the
 - Custom physics (AABB, friction `vx *= exp(-K*friction*dt)`). Do not add a physics engine.
 - Tune numbers in config.js, not inline.
 - Art and music must be human-made (jam rules). No AI images or audio. Credit assets in CREDITS.md.
-- Art sizes are in art pixels (soap 16x12, pump 24x40, tiles 16x16, bg and title/win 320x180). 1 art pixel = 6 world px.
-- Platforms sit on the 16 px tile grid, half a tile thick by default. The soap is 1 tile wide and 3/4 tall.
+- Art is in assets/texture/ (ART in config.js; USE_ART on). Sizes in art pixels: soap 24x16 (the bar inside it, 23x12,
+  is the hitbox SOAP_W x SOAP_H), pump 24x40, bin prop 16x16, tiles 16x16, bg and title 320x180 (not drawn yet).
+  Sprites are lined up by their non-transparent part, so empty margins in a PNG are fine. 1 art pixel = 6 world px.
+- Platforms sit on the 16 px tile grid, half a tile thick by default. The soap is about 1.4 tiles wide and 3/4 tall.
 - Look: soft and gentle, like the team's reference: pastel PAL, tinted outlines (no pure black), calm two-tone backgrounds, sparse props.
 - No em dashes in text or comments.
 

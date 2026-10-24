@@ -87,7 +87,7 @@ function drawTitleScene(t) {
   // the dustbin, with our soap peeking out and glaring at the pump soap
   const pl = TITLE_BIN, bx = 22, peek = Math.round(Math.sin(t * 2) * 1.5), look = Math.floor(t) % 4 === 0 ? 0 : 1;
   R(bx, gy - 50, 6, 24, pl.edge); R(bx + 1, gy - 49, 4, 22, pl.cap);    // open lid, standing up behind
-  drawSoapSprite(bx + 14, gy - 37 + peek, 16, 12, 0, 'angry', look, 0);   // determined
+  drawSoapSprite(bx + 10, gy - 37 + peek, px(SOAP_W), px(SOAP_H), 0, 'angry', look, 0);   // determined
   R(bx, gy - 26, 44, 27, pl.edge); R(bx + 1, gy - 25, 42, 25, pl.body);
   R(bx - 2, gy - 29, 48, 4, pl.edge); R(bx - 1, gy - 28, 46, 1, pl.light); R(bx - 1, gy - 27, 46, 1, pl.cap);
   drawTextC('BIN', bx + 22, gy - 16, 1, pl.edge, true);
