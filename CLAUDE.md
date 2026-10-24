@@ -16,7 +16,8 @@ started in is a fall: the soap flops (sound, dazed for FLOP_TIME, can't shoot) a
 soap taunt. Fast falls bring wind (streaks and a roar). Hitting the pump soap flings it as a floppy two piece ragdoll.
 The game draws on a 320 x 180 canvas shown 4x (1280 x 720) with smoothing off. The level is built on a
 16 px tile grid: 29 tiles wide (the camera scrolls sideways as well as up) and 89 tall, five zones bottom to top
-(dustbin, floor tiles, toilet, towel rack, sink), laid out from the team's sketches (1 tile = 32 sketch px).
+(dustbin, floor tiles, toilet, towel rack, sink), laid out from the team's sketches (1 tile = 32 sketch px), every
+ledge one tile wider than drawn (3 at least) to keep it doable.
 Ledges are half a tile thick. No checkpoints. The intro: the pump soap shoves the soap over the sink's left lip,
 and it drops (in front of the level) into the bin.
 Flow: title screen -> intro cutscene (pump shoves the soap off the sink into the bin, click skips) -> play -> win.
@@ -27,7 +28,8 @@ Flow: title screen -> intro cutscene (pump shoves the soap off the sink into the
 - js/level.js: level data only, in tiles (plat(col, row, w, surface, opts) for solids, deco(kind, col, row, opts) for scenery)
 - js/soap.js: physics, meter, launch, falls, win, the pump ragdoll. No drawing, no DOM.
   Pushes events (launch, land, bounce, flop, getup, win, bonk) onto game.events instead of playing sounds
-- js/audio.js: sound effects. Synth placeholders (Web Audio), or human-made files when USE_SOUND_FILES is on
+- js/audio.js: sound effects. The team's recordings (assets/audio, SOUND_FILES in config.js), synth placeholders for
+  the rest. 'wind' (free fall) and 'slide' (sliding on wet) are loops whose volume follows the action
 - js/draw.js: the world, drawn straight on the 320x180 page canvas (soft 8-bit style): pixel font, platforms by surface, wall bands,
   scenery (DECO), pump, soap, particles (FX), aim and meter, and drawFrame which puts a frame together
 - js/screens.js: drawn on top of the world: title, intro cutscene (updateIntro + drawIntro), HUD,

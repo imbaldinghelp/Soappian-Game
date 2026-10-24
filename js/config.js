@@ -78,10 +78,10 @@ const WIND_VOLUME = 0.35;                 // loudness of the wind at full speed,
 // Drawn like soft 8-bit ground: a cap on top (light row + cap colour), a body with gentle bands, a tinted edge.
 // 1 bar and less: fuzzy top. 3 bars and more: shiny top with a glint.
 const SURFACES = {
-  plastic: { name: 'PLASTIC', slip: 2,   friction: 0.45, bounce: 0.1, light: '#e0f7f0', cap: '#b5e6d8', body: '#93cfc0', band: '#7fbcad', edge: '#3e6b68' },  // mint
-  ceramic: { name: 'CERAMIC', slip: 3,   friction: 0.22, bounce: 0.1, light: '#ffffff', cap: '#ffffff', body: '#e3e8f3', band: '#cdd4e6', edge: '#6f7396' },  // white
-  wet:     { name: 'WET',     slip: 5,   friction: 0.04, bounce: 0.1, light: '#e3fbff', cap: '#9fe3f2', body: '#6cb4e0', band: '#5aa0cf', edge: '#2f5b8a' },  // blue
-  seat:    { name: 'SEAT',    slip: 2.5, friction: 0.32, bounce: 0.1, light: '#fffbe8', cap: '#fff2bf', body: '#f7dc8c', band: '#ecc96e', edge: '#8f7234' },  // butter
+  plastic: { name: 'PLASTIC', slip: 2,   friction: 0.50, bounce: 0.1, light: '#e0f7f0', cap: '#b5e6d8', body: '#93cfc0', band: '#7fbcad', edge: '#3e6b68' },  // mint
+  ceramic: { name: 'CERAMIC', slip: 3,   friction: 0.28, bounce: 0.1, light: '#ffffff', cap: '#ffffff', body: '#e3e8f3', band: '#cdd4e6', edge: '#6f7396' },  // white
+  wet:     { name: 'WET',     slip: 5,   friction: 0.06, bounce: 0.1, light: '#e3fbff', cap: '#9fe3f2', body: '#6cb4e0', band: '#5aa0cf', edge: '#2f5b8a' },  // blue
+  seat:    { name: 'SEAT',    slip: 2.5, friction: 0.38, bounce: 0.1, light: '#fffbe8', cap: '#fff2bf', body: '#f7dc8c', band: '#ecc96e', edge: '#8f7234' },  // butter
   towel:   { name: 'TOWEL',   slip: 1,   friction: 0.85, bounce: 0.0, light: '#ffdbe7', cap: '#ffb7cf', body: '#f497b9', band: '#e57fa5', edge: '#9a4870' },  // pink
   wall:    { name: 'WALL',    slip: 0,   friction: 0.20, bounce: 0.75, light: '#ffd0c6', cap: '#ffa596', body: '#f0857a', band: '#dc7066', edge: '#8c4450' },  // the ceiling and the level's sides
 };
@@ -118,21 +118,21 @@ const INTRO_AFTER = 2.4;                  // time in the bin before play starts
 const INTRO_LINES = ['Out of my sink, bar.', 'Enjoy the bin!', 'Climb back to the sink.'];
 
 // ---- Sound ----
-// Placeholder sounds are synthesised in js/audio.js. Set USE_SOUND_FILES to true to play human-made
-// recordings from assets/ instead (jam rules: no AI audio). Missing files fall back to the synth.
+// The team's recordings (jam rules: no AI audio). A sound with no file here plays its synthesised
+// placeholder from js/audio.js. Still synth for now: jump (launch, pitch rises with power), click,
+// push (intro shove), whistle (intro fall), clang (intro bin), bounce (ricochet), bonk (flung pump soap).
+// To add one, put the file in assets/audio/ and add a line below with that name.
 const SOUND_VOLUME = 0.5;                 // master volume, 0 to 1
-const USE_SOUND_FILES = false;
+const LOOP_VOLUME = { wind: 1.0, slide: 0.9 };   // loudness of the looping recordings at full level
+const SLIDE_FULL = 900;                   // sliding on wet this fast (px/s) plays the slide sound at full volume
+const USE_SOUND_FILES = true;             // false = synth placeholders only
+const SFX = 'assets/audio/SFX/SFX/';
 const SOUND_FILES = {
-  jump: 'assets/sfx_jump.wav',            // launch (pitch rises with power)
-  land: 'assets/sfx_land.wav',
-  flop: 'assets/sfx_flop.wav',             // the soap lands flat after a fall
-  win: 'assets/sfx_win.wav',
-  click: 'assets/sfx_click.wav',
-  push: 'assets/sfx_push.wav',            // intro: pump shoves the soap
-  whistle: 'assets/sfx_whistle.wav',      // intro: the long fall
-  clang: 'assets/sfx_clang.wav',          // intro: soap hits the bin
-  bounce: 'assets/sfx_bounce.wav',        // soap ricochets off a bouncy wall
-  bonk: 'assets/sfx_bonk.wav',            // the flung pump soap hits something
+  land: SFX + 'Hitting ground.mp3',       // every landing, louder the harder
+  flop: SFX + 'Hitting ground.mp3',       // landing flat after a fall (played lower and heavier)
+  win: SFX + 'Hitting pump soap.mp3',     // knocking the pump soap over
+  wind: SFX + 'falling.mp3',              // loops while free falling (replaces the synth wind)
+  slide: SFX + 'sliding on wet.mp3',      // loops while sliding on wet
 };
 
 // ---- Art: set USE_ART to true once Aaron's PNGs are in the assets folder ----

@@ -6,7 +6,8 @@
 const low = document.getElementById('game');
 low.width = LOW_W;
 low.height = LOW_H;
-let L = low.getContext('2d');             // what R() and friends draw on (spriteOf points it elsewhere for a moment)
+// desynchronized: draw straight to the screen where the browser allows it, so the aim line keeps up with the mouse
+let L = low.getContext('2d', { alpha: false, desynchronized: true });   // what R() and friends draw on (spriteOf points it elsewhere for a moment)
 L.imageSmoothingEnabled = false;
 
 const IMAGES = {};

@@ -10,7 +10,8 @@
 // props in tiles, options.text is the text on a sign (or the material on a 'material' board),
 // options.wall = true hangs the sign on the wall (no post).
 // The soap is 1 tile wide and 3/4 of a tile tall. Every side of every platform ricochets.
-// The layout follows the team's sketches (level1-2 to level4-5): 1 tile = 32 px of the drawings.
+// The layout follows the team's sketches (level1-2 to level4-5): 1 tile = 32 px of the drawings, with every
+// ledge made a tile wider (3 at least) so the climb is easier.
 
 function plat(col, row, w, surface, o) {
   o = o || {};
@@ -49,97 +50,97 @@ const LEVEL = {
     plat(20, 86, 1, 'plastic', { h: 2 }),   // pillar
     plat(23, 81, 1, 'plastic', { h: 7 }),   // pillar
     plat(28, 84, 1, 'plastic', { h: 4 }),   // pillar
-    plat(16, 79, 5, 'plastic'),
-    plat(10, 76, 3, 'plastic'),
-    plat(23, 76, 1, 'plastic'),
-    plat(6, 74, 1, 'plastic'),
-    plat(1, 71, 3, 'plastic'),
-    plat(10, 71, 3, 'plastic'),
-    plat(24, 72, 3, 'plastic'),
+    plat(15, 79, 6, 'plastic'),
+    plat(10, 76, 4, 'plastic'),
+    plat(22, 76, 3, 'plastic'),
+    plat(5, 74, 3, 'plastic'),
+    plat(0, 71, 4, 'plastic'),
+    plat(9, 71, 4, 'plastic'),
+    plat(24, 72, 4, 'plastic'),
 
     // ---- Zone 2: bathroom floor. CERAMIC (3 bars). (rows 54 to 69) ----
-    plat(4, 66, 2, 'ceramic'),
-    plat(5, 65, 1, 'ceramic', { h: 1 }),   // wall on the right end
-    plat(10, 65, 2, 'ceramic'),
-    plat(15, 67, 2, 'ceramic'),
-    plat(21, 66, 3, 'ceramic'),
-    plat(23, 64, 1, 'ceramic', { h: 2 }),   // wall on the right end
-    plat(27, 67, 1, 'ceramic'),
-    plat(3, 61, 2, 'ceramic'),
-    plat(8, 62, 2, 'ceramic'),
-    plat(8, 61, 1, 'ceramic', { h: 1 }),   // wall on the left end
-    plat(15, 62, 3, 'ceramic'),
-    plat(17, 60, 1, 'ceramic', { h: 2 }),   // wall on the right end
-    plat(26, 61, 1, 'ceramic'),
-    plat(1, 58, 1, 'ceramic'),
     plat(9, 57, 1, 'ceramic', { h: 1 }),   // pillar
-    plat(11, 59, 2, 'ceramic'),
-    plat(21, 60, 3, 'ceramic'),
-    plat(21, 58, 1, 'ceramic', { h: 2 }),   // wall on the left end
-    plat(4, 56, 2, 'ceramic'),
-    plat(4, 55, 1, 'ceramic', { h: 1 }),   // wall on the left end
-    plat(11, 55, 2, 'ceramic'),
     plat(17, 55, 1, 'ceramic', { h: 2 }),   // pillar
-    plat(23, 56, 2, 'ceramic'),
+    plat(4, 66, 3, 'ceramic'),
+    plat(6, 65, 1, 'ceramic', { h: 1 }),   // wall on the right end
+    plat(9, 65, 3, 'ceramic'),
+    plat(15, 67, 3, 'ceramic'),
+    plat(20, 66, 4, 'ceramic'),
+    plat(23, 64, 1, 'ceramic', { h: 2 }),   // wall on the right end
+    plat(26, 67, 3, 'ceramic'),
+    plat(2, 61, 3, 'ceramic'),
+    plat(8, 62, 3, 'ceramic'),
+    plat(8, 61, 1, 'ceramic', { h: 1 }),   // wall on the left end
+    plat(14, 62, 4, 'ceramic'),
+    plat(17, 60, 1, 'ceramic', { h: 2 }),   // wall on the right end
+    plat(25, 61, 3, 'ceramic'),
+    plat(0, 58, 3, 'ceramic'),
+    plat(11, 59, 3, 'ceramic'),
+    plat(20, 60, 4, 'ceramic'),
+    plat(20, 58, 1, 'ceramic', { h: 2 }),   // wall on the left end
+    plat(4, 56, 3, 'ceramic'),
+    plat(4, 55, 1, 'ceramic', { h: 1 }),   // wall on the left end
+    plat(11, 55, 3, 'ceramic'),
+    plat(23, 56, 3, 'ceramic'),
 
     // ---- Zone 3: toilet. WET (5 bars) and TOILET SEAT (2.5 bars). (rows 34 to 53) ----
-    plat(14, 52, 3, 'wet'),
-    plat(20, 52, 2, 'wet'),
-    plat(7, 51, 2, 'seat'),
-    plat(9, 51, 2, 'wet'),
-    plat(18, 49, 1, 'seat'),
-    plat(26, 50, 1, 'seat'),
-    plat(1, 48, 1, 'seat'),
-    plat(2, 48, 2, 'wet'),
-    plat(0, 45, 2, 'wet'),
     plat(12, 45, 1, 'seat', { h: 2 }),   // wall
-    plat(13, 47, 3, 'wet'),
-    plat(22, 46, 3, 'wet'),
     plat(25, 44, 1, 'seat', { h: 3 }),   // wall
-    plat(28, 46, 1, 'seat'),
     plat(6, 42, 1, 'wet', { h: 2 }),   // toilet bowl, left side
-    plat(7, 44, 2, 'seat'),   // toilet bowl, bottom
     plat(9, 42, 1, 'wet', { h: 2 }),   // toilet bowl, right side
-    plat(22, 41, 2, 'wet'),
-    plat(12, 40, 3, 'seat'),
-    plat(18, 38, 2, 'seat'),
-    plat(14, 35, 3, 'seat'),
-    plat(21, 35, 3, 'seat'),
+    plat(13, 52, 4, 'wet'),
+    plat(20, 52, 3, 'wet'),
+    plat(7, 51, 3, 'seat'),
+    plat(10, 51, 3, 'wet'),
+    plat(17, 49, 3, 'seat'),
+    plat(25, 50, 3, 'seat'),
+    plat(0, 48, 3, 'seat'),
+    plat(3, 48, 3, 'wet'),
+    plat(0, 45, 3, 'wet'),
+    plat(13, 47, 4, 'wet'),
+    plat(21, 46, 4, 'wet'),
+    plat(26, 46, 3, 'seat'),
+    plat(6, 44, 3, 'seat'),   // toilet bowl, bottom
+    plat(21, 41, 3, 'wet'),
+    plat(11, 40, 4, 'seat'),
+    plat(17, 38, 3, 'seat'),
+    plat(14, 35, 4, 'seat'),
+    plat(21, 35, 4, 'seat'),
 
     // ---- Zone 4: towel rack. TOWEL (1 bar), with wet. (rows 18 to 33) ----
-    plat(10, 32, 2, 'towel'),
-    plat(18, 32, 1, 'towel'),
-    plat(25, 31, 2, 'towel'),
-    plat(6, 30, 2, 'towel'),
-    plat(14, 29, 2, 'towel'),
-    plat(22, 29, 2, 'towel'),
-    plat(9, 27, 1, 'towel'),
-    plat(2, 26, 2, 'towel'),
-    plat(26, 26, 1, 'towel'),
-    plat(14, 24, 1, 'towel'),
-    plat(0, 23, 1, 'towel'),
-    plat(7, 23, 1, 'towel'),
-    plat(17, 23, 1, 'towel'),
-    plat(21, 22, 2, 'towel'),
-    plat(23, 22, 1, 'wet'),
-    plat(2, 20, 2, 'wet'),
-    plat(4, 20, 1, 'towel'),
-    plat(9, 19, 2, 'towel'),
-    plat(19, 19, 2, 'towel'),
+    plat(10, 32, 3, 'towel'),
+    plat(17, 32, 3, 'towel'),
+    plat(25, 31, 3, 'towel'),
+    plat(5, 30, 3, 'towel'),
+    plat(14, 29, 3, 'towel'),
+    plat(22, 29, 3, 'towel'),
+    plat(8, 27, 3, 'towel'),
+    plat(2, 26, 3, 'towel'),
+    plat(25, 26, 3, 'towel'),
+    plat(13, 24, 3, 'towel'),
+    plat(0, 23, 3, 'towel'),
+    plat(6, 23, 3, 'towel'),
+    plat(16, 23, 3, 'towel'),
+    plat(21, 22, 3, 'towel'),
+    plat(24, 22, 3, 'wet'),
+    plat(2, 20, 3, 'wet'),
+    plat(5, 20, 3, 'towel'),
+    plat(8, 19, 3, 'towel'),
+    plat(18, 19, 3, 'towel'),
 
     // ---- Zone 5: sink. CERAMIC and WET. (rows 0 to 17) ----
-    plat(14, 16, 3, 'ceramic'),
-    plat(9, 14, 2, 'ceramic'),
-    plat(9, 13, 1, 'ceramic', { h: 1 }),   // wall on the left end
-    plat(12, 12, 1, 'ceramic'),
-    plat(17, 12, 2, 'ceramic'),
-    plat(18, 11, 1, 'ceramic', { h: 1 }),   // wall on the right end
-    plat(24, 11, 1, 'ceramic'),
-    plat(25, 11, 1, 'wet'),
-    plat(28, 8, 1, 'wet'),
-    plat(22, 7, 2, 'wet'),
-    plat(17, 6, 3, 'wet'),
-    plat(11, 5, 3, 'wet'),
+    plat(13, 16, 4, 'ceramic'),
+    plat(8, 14, 3, 'ceramic'),
+    plat(8, 13, 1, 'ceramic', { h: 1 }),   // wall on the left end
+    plat(11, 12, 3, 'ceramic'),
+    plat(17, 12, 3, 'ceramic'),
+    plat(19, 11, 1, 'ceramic', { h: 1 }),   // wall on the right end
+    plat(23, 11, 3, 'ceramic'),
+    plat(26, 11, 3, 'wet'),
+    plat(26, 8, 3, 'wet'),
+    plat(22, 7, 3, 'wet'),
+    plat(16, 6, 4, 'wet'),
+    plat(11, 5, 4, 'wet'),
     plat(2, 4, 1, 'ceramic', { h: 2 }),   // sink: left lip
     plat(3, 5, 5, 'ceramic', { h: 1 }),   //   basin: slide in over the right lip and into the pump soap
     plat(8, 4, 1, 'ceramic', { h: 2 }),   //   right lip
@@ -150,7 +151,7 @@ const LEVEL = {
   decor: [
     deco('bin', 4, 88, { w: 4, h: 4 }), deco('paperball', 8.5, 88), deco('paperball', 13.5, 88),
     deco('plant', 25.5, 88), deco('peel', 18, 88),
-    deco('sign', 6, 81.9, { text: 'SLIPPERY? ESC = MANUAL', wall: true }),
+    deco('sign', 6, 81.9, { text: 'SURFACE MANUAL: PRESS ESC', wall: true }),
     deco('material', 6, 83.3, { text: 'plastic' }),
 
     deco('material', 13, 69.6, { text: 'ceramic' }),

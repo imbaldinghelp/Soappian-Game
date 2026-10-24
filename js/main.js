@@ -206,6 +206,7 @@ function update(dt) {
   if (game.state === 'paused') {                                     // frozen: only the wind dies down
     fxUpdate(game, dt);
     setWind(FX.wind);
+    setSlide(0);
     return;
   }
   if (game.tauntT > 0) game.tauntT -= dt;
@@ -228,6 +229,8 @@ function update(dt) {
   handleEvents();
   fxUpdate(game, dt);
   setWind(FX.wind);
+  const g = game.soap.ground;                                        // sliding on wet: a wet squeak that follows the speed
+  setSlide(game.state === 'play' && g && g.surface === 'wet' ? Math.min(1, Math.abs(game.soap.vx) / SLIDE_FULL) : 0);
 
   const t = cameraTarget();
   const k = 1 - Math.exp(-CAMERA_FOLLOW * dt);                       // smooth follow

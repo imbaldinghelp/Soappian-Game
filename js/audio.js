@@ -1,9 +1,9 @@
-// audio.js - sound effects. Placeholder sounds are synthesised with the Web Audio API, so the game
-// needs no sound files. Set USE_SOUND_FILES in config.js to play human-made recordings from assets/
-// instead (any file that is missing keeps its synth sound). Browsers only allow sound after the
-// first click or tap, so main.js calls unlockAudio() from the first press.
+// audio.js - sound effects. The team's recordings in assets/ (SOUND_FILES in config.js) play when
+// USE_SOUND_FILES is on; any sound without a file falls back to a synthesised placeholder (Web Audio).
+// Two sounds loop and follow the action: 'wind' (free fall) and 'slide' (sliding on wet).
+// Browsers only allow sound after the first click or tap, so main.js calls unlockAudio() from the first press.
 
-const AUDIO = { ctx: null, master: null, noise: null, wind: null, windLevel: 0, files: {}, muted: false };
+const AUDIO = { ctx: null, master: null, noise: null, wind: null, windLevel: 0, loops: {}, files: {}, muted: false };
 
 try { AUDIO.muted = localStorage.getItem('soappian-muted') === '1'; } catch (e) { /* storage blocked: start unmuted */ }
 
@@ -26,12 +26,21 @@ function unlockAudio() {
 
 function loadSoundFiles() {
   Object.keys(SOUND_FILES).forEach(function (name) {
-    fetch(SOUND_FILES[name])
+    fetch(encodeURI(SOUND_FILES[name]))                 // file names may have spaces
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
       .then(function (b) { return AUDIO.ctx.decodeAudioData(b); })
-      .then(function (buf) { AUDIO.files[name] = buf; })
+      .then(function (buf) { buf.trim = soundBounds(buf); AUDIO.files[name] = buf; })
       .catch(function () { /* missing file: keep the synth sound */ });
   });
+}
+
+// Where the sound in a recording starts and ends (skips silence), so loops repeat without a gap.
+function soundBounds(buf) {
+  const d = buf.getChannelData(0);
+  let first = 0, last = d.length - 1;
+  while (first < last && Math.abs(d[first]) < 0.02) first++;
+  while (last > first && Math.abs(d[last]) < 0.02) last--;
+  return { start: first / buf.sampleRate, end: (last + 1) / buf.sampleRate };
 }
 
 function isMuted() { return AUDIO.muted; }
@@ -118,10 +127,36 @@ const SYNTH = {
   },
 };
 
-// Free-fall wind: one looping noise, its pitch and volume follow level (0 to 1). Called every frame, but
-// only reschedules the sound when the level has really changed.
+// A recording that loops while something lasts; its volume follows level (0 to 1). Called every frame,
+// but only touches the sound when the level has really changed. Does nothing until the file has loaded.
+function setLoop(name, level) {
+  const buf = AUDIO.files[name];
+  if (!AUDIO.ctx || !buf) return;
+  if (level < 0.01) level = 0;
+  let lp = AUDIO.loops[name];
+  if (!lp) {
+    if (level === 0) return;
+    const src = AUDIO.ctx.createBufferSource();
+    src.buffer = buf; src.loop = true; src.loopStart = buf.trim.start; src.loopEnd = buf.trim.end;
+    const g = AUDIO.ctx.createGain();
+    g.gain.value = 0;
+    src.connect(g); g.connect(AUDIO.master);
+    src.start(0, buf.trim.start);
+    lp = AUDIO.loops[name] = { gain: g, level: 0 };
+  }
+  if (Math.abs(level - lp.level) < 0.01 && (level > 0 || lp.level === 0)) return;
+  lp.level = level;
+  lp.gain.gain.setTargetAtTime((LOOP_VOLUME[name] || 1) * level, AUDIO.ctx.currentTime, 0.06);
+}
+
+// Sliding on wet: level 0 (still) to 1 (fast).
+function setSlide(level) { setLoop('slide', level); }
+
+// Free-fall wind, level 0 to 1. The 'wind' recording if there is one, else one looping filtered noise
+// whose pitch and volume follow the level. Called every frame.
 function setWind(level) {
   if (!AUDIO.ctx) return;
+  if (AUDIO.files.wind) { setLoop('wind', level); level = 0; }        // the recording takes over
   if (level < 0.01) level = 0;
   if (Math.abs(level - AUDIO.windLevel) < 0.01 && (level > 0 || AUDIO.windLevel === 0)) return;
   AUDIO.windLevel = level;
@@ -148,8 +183,9 @@ function playSound(name, strength, surface) {
     const src = AUDIO.ctx.createBufferSource();
     src.buffer = buf;
     if (name === 'jump') src.playbackRate.value = 0.85 + 0.4 * (strength || 0);   // higher pitch for harder shots
+    if (name === 'flop') src.playbackRate.value = 0.75;                            // the landing sound, but heavier
     const g = AUDIO.ctx.createGain();
-    g.gain.value = name === 'land' || name === 'bounce' || name === 'bonk' ? 0.3 + 0.7 * (strength || 0) : 1;
+    g.gain.value = name === 'land' || name === 'bounce' || name === 'bonk' ? 0.25 + 0.75 * (strength || 0) : 1;
     src.connect(g); g.connect(AUDIO.master);
     src.start();
     return;
