@@ -11,8 +11,8 @@ const VIEW_WORLD_W = LOW_W * PIXEL;       // how much of the world you see (1920
 const VIEW_WORLD_H = LOW_H * PIXEL;
 const TILE = 16;                          // tile size in art pixels: platforms sit on this grid
 const TILE_PX = TILE * PIXEL;             // one tile in world px (96)
-const WORLD_W = 29 * TILE_PX;             // level size in tiles: 29 wide (the camera scrolls sideways too), 89 tall
-const WORLD_H = 89 * TILE_PX;
+const WORLD_W = 29 * TILE_PX;             // level size in tiles: 29 wide (the camera scrolls sideways too), 139 tall
+const WORLD_H = 139 * TILE_PX;
 const DT = 1 / 60;                        // fixed physics step
 
 // Colour palette: soft pastels, laid out like the PICO-8 palette. Everything is drawn with these.
@@ -39,6 +39,9 @@ const STOP_SPEED = 13;                    // below this on a surface the soap co
 const LAND_ABSORB = 260;                  // landing slower than this never bounces
 const HOP_MAX = 150;                      // a hard landing hops back up at most this fast (not on bouncy tops: those are trampolines)
 const SIDE_BOUNCE = 0.6;                  // hitting the side of any platform or wall bounces back at least this much
+// Slides (LEVEL.slides): tilted chutes that only catch from above. Landing on one keeps just the speed along
+// it, so a fall becomes a sideways fling off the low end and a missed jump drops further. Nobody stands on one.
+const SLIDE_COLORS = { light: '#fff6c9', body: '#ffe27a', band: '#f2c14e', edge: '#2b2c42' };   // yellow playground slide
 const BOUNCE_FX_MIN = 300;                // a ricochet faster than this (px/s) makes a boing and sparks
 const SUBSTEPS = 8;                       // physics steps per frame (stops fast shots tunnelling)
 const CAMERA_FOLLOW = 10;                 // how fast the camera catches up with the soap (bigger = tighter)

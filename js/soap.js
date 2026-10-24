@@ -61,6 +61,7 @@ function stepSoap(s, solids, dt) {
     s.vx = -s.vx * Math.max(SIDE_BOUNCE, SURFACES[b.surface].bounce);   // every side ricochets
   }
 
+  const oldBottom = s.y + s.h;
   s.y += s.vy * dt;
   for (let i = 0; i < solids.length; i++) {
     const b = solids[i];
@@ -80,6 +81,23 @@ function stepSoap(s, solids, dt) {
       s.vy = -s.vy * bounce;
     }
   }
+  if (s.vy > 0) for (const sl of LEVEL.slides) slideHit(s, sl, oldBottom);
+}
+
+// A slide catches the soap by the middle of its bottom edge, only on the way down. The speed into the chute is
+// lost and the speed along it kept (gravity keeps adding to it), so the soap shoots off the low end.
+function slideHit(s, sl, oldBottom) {
+  const cx = s.x + s.w / 2;
+  if (cx < Math.min(sl.x0, sl.x1) || cx > Math.max(sl.x0, sl.x1)) return;
+  const top = sl.y0 + (sl.y1 - sl.y0) * (cx - sl.x0) / (sl.x1 - sl.x0);
+  if (oldBottom > top + 1 || s.y + s.h < top) return;          // came from below, or not there yet
+  let tx = sl.x1 - sl.x0, ty = sl.y1 - sl.y0;
+  if (ty < 0) { tx = -tx; ty = -ty; }                           // downhill
+  const len = Math.hypot(tx, ty); tx /= len; ty /= len;
+  noteBump(s, Math.abs(s.vy * tx - s.vx * ty), cx, top);        // the hit into the chute: boing and sparks
+  const along = Math.max(0, s.vx * tx + s.vy * ty);
+  s.y = top - s.h;
+  s.vx = along * tx; s.vy = along * ty;
 }
 
 // Which zone (0 to 4, bottom to top) a world y falls in.

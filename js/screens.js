@@ -113,8 +113,8 @@ function drawTitle(game, input) {
 }
 
 // ---------- intro cutscene ----------
-// Runs on the real level: the pump soap shoves the soap left across the sink, the soap pops over the
-// sink's left lip and drops all the way down into the dustbin. updateIntro moves the soap and the pump;
+// Runs on the real level: the pump soap shoves the soap left across the sink, the soap pops off the
+// sink's open left end and drops all the way down into the dustbin. updateIntro moves the soap and the pump;
 // it returns true when it is over.
 function startIntro(game) {
   game.state = 'intro';
@@ -133,7 +133,7 @@ function updateIntro(game, dt) {
     if (it.t >= INTRO_TALK) { it.phase = 'push'; it.t = 0; playSound('push'); }
   } else if (it.phase === 'push') {
     const k = Math.min(1, it.t / INTRO_PUSH), e = k * k;                  // speeds up as it shoves
-    const edge = LEVEL.sinkEdge;                                          // inside of the sink's left lip
+    const edge = LEVEL.sinkEdge;                                          // the basin's open left end
     p.x = LEVEL.pumpIntroX - e * (LEVEL.pumpIntroX - (edge + s.w));       // shoves the soap up against the lip
     if (p.x < s.x + s.w) { s.x = p.x - s.w; s.face = 'shock'; }
     game.pumpMood = 'push';

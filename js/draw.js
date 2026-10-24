@@ -207,6 +207,20 @@ function drawBlock(b) {
   }
 }
 
+// A slide: a tilted yellow chute, its top edge is where the soap touches. Light dashes run downhill.
+function drawSlide(sl) {
+  const c = SLIDE_COLORS;
+  const xa = px(Math.min(sl.x0, sl.x1)), xb = px(Math.max(sl.x0, sl.x1));
+  const down = (sl.y1 - sl.y0) * (sl.x1 - sl.x0) > 0 ? 1 : -1;   // 1 = runs down to the right
+  const run = Math.floor(now() * 24);
+  for (let x = xa; x < xb; x++) {
+    const y = Math.round(px(sl.y0) + (px(sl.y1) - px(sl.y0)) * (x - px(sl.x0)) / (px(sl.x1) - px(sl.x0)));
+    R(x, y - 1, 1, 6, c.edge);
+    R(x, y, 1, 1, (((x * down - run) % 8) + 8) % 8 < 2 ? '#ffffff' : c.light);
+    R(x, y + 1, 1, 2, c.body); R(x, y + 3, 1, 1, c.band);
+  }
+}
+
 // ---------- the wall behind each zone: calm colour bands, like a sky ----------
 function drawBackground(i, vx0, vy0, vx1, vy1) {
   const z = LEVEL.zones[i];
@@ -567,6 +581,10 @@ function drawWorld(game, vx0, vy0, vx1, vy1, aim, camX, camY) {
     if (x1 < vx0 || x0 > vx1 || y1 < vy0 || y0 > vy1) continue;
     if (b.surface === 'wall' && (b.x < 0 || b.x >= WORLD_W || b.y < 0)) continue;   // world edges stay invisible
     drawBlock(b);
+  }
+  for (const sl of LEVEL.slides) {
+    if (px(Math.max(sl.y0, sl.y1)) + 5 < vy0 || px(Math.min(sl.y0, sl.y1)) - 1 > vy1) continue;
+    drawSlide(sl);
   }
   for (const d of LEVEL.decor) if (!BACK_DECO[d.kind]) drawDeco(d, vx0, vy0, vx1, vy1);
   drawPump(game);

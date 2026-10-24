@@ -65,12 +65,15 @@ Surfaces: `tile`, `plastic`, `paper`, `wet`, `towel`, `seat`, `ceramic`, `metal`
 Scenery with no collision goes in `decor`: `deco('duck', col, row)` (col = centre, halves are fine; row = what it stands on).
 Signs take text: `deco('sign', col, row, { text: 'MATS GRIP' })`. The kinds are drawn in `DECO` in `js/draw.js`.
 Mark a new material with `deco('material', col, row, { text: 'wet' })`.
-Rows grow downward, row 0 is the top. The level is 29 tiles wide (the camera scrolls sideways) and 89 tall.
+Rows grow downward, row 0 is the top. The level is 29 tiles wide (the camera scrolls sideways) and 139 tall.
 The soap is 1 tile wide and 3/4 of a tile tall.
 The manual reads the zone each material first turns up from the level itself.
 Grippy surfaces (friction 0.3 and up, `GRIP_FRICTION`) are drawn with fuzzy tops, slippery ones shiny.
 Add `{ push: -80 }` to make a slope (negative = pushes left). A slope only holds the soap if the
 surface friction cancels the push, so a towel holds and glossy seat or wet tile do not.
+Slides are separate: `slide(col0, row0, col1, row1)` in `LEVEL.slides` is a yellow chute between two points. It only
+catches a soap falling onto it, keeps the speed along it and flings the soap off the low end. Put them in the gaps under
+hard jumps (below the ledges, so a good jump never touches one) to stop a miss landing back on a nearby ledge.
 
 `Esc` pauses (resume or back to the title). Debug keys: `D` toggles debug (hitboxes, speeds). With debug on, `1` to `5` jump to a zone and
 shift+click teleports the soap. `M` shows the whole level on one screen.

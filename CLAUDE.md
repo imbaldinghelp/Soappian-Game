@@ -15,20 +15,22 @@ Every platform side and wall ricochets (SIDE_BOUNCE) with a boing and sparks. A 
 started in is a fall: the soap flops (sound, dazed for FLOP_TIME, can't shoot) and only then does the pump
 soap taunt. Fast falls bring wind (streaks and a roar). Hitting the pump soap flings it as a floppy two piece ragdoll.
 The game draws on a 320 x 180 canvas shown 4x (1280 x 720) with smoothing off. The level is built on a
-16 px tile grid: 29 tiles wide (the camera scrolls sideways as well as up) and 89 tall, five zones bottom to top
-(dustbin, floor tiles, toilet, towel rack, sink). Foddian layout: each zone is a staircase across the level, so a
-missed jump drops past the ledges below (often a zone or more); slippery ledges under hard jumps, grippy ones as the
-reward, little end walls where a slide must stop, and a few rest points at zone boundaries. The old sketch-based
-layout is kept in js/level.backup.js (not loaded).
-Ledges are half a tile thick. No checkpoints. The intro: the pump soap shoves the soap over the sink's left lip,
+16 px tile grid: 29 tiles wide (the camera scrolls sideways as well as up) and 139 tall, five zones bottom to top
+(dustbin, floor tiles, toilet, towel rack, sink). Foddian layout: each zone is a staircase across the level and back,
+so a missed jump drops past the ledges below (often a zone or more); slippery ledges under hard jumps, grippy ones as
+the reward (towel ledges are short, 1.5 tiles), little end walls where a slide must stop, and a few rest points at
+zone boundaries. Yellow slides (LEVEL.slides) sit in the gaps: one-way chutes that only catch a falling soap and fling
+it sideways off the low end, so a miss does not just drop back onto a nearby ledge. The old sketch-based layout is
+kept in js/level.backup.js (not loaded).
+Ledges are half a tile thick. No checkpoints. The intro: the pump soap shoves the soap off the sink's open left end,
 and it drops (in front of the level) into the bin.
 Flow: title screen -> intro cutscene (pump shoves the soap off the sink into the bin, click skips) -> play -> win.
 
 ## Files
 - index.html: one canvas, loads the scripts in order (no modules, shared globals)
 - js/config.js: ALL tunable numbers, palette, surfaces, taunts, intro timing, sound and art file names
-- js/level.js: level data only, in tiles (plat(col, row, w, surface, opts) for solids, deco(kind, col, row, opts) for scenery)
-- js/soap.js: physics, meter, launch, falls, win, the pump ragdoll. No drawing, no DOM.
+- js/level.js: level data only, in tiles (plat(col, row, w, surface, opts) for solids, slide(col0, row0, col1, row1) for chutes, deco(kind, col, row, opts) for scenery)
+- js/soap.js: physics (slideHit: the one-way slides), meter, launch, falls, win, the pump ragdoll. No drawing, no DOM.
   Pushes events (launch, land, bounce, flop, getup, win, bonk) onto game.events instead of playing sounds
 - js/audio.js: sound effects. The team's recordings (assets/audio, SOUND_FILES in config.js), synth placeholders for
   the rest. 'wind' (free fall) and 'slide' (sliding on wet) are loops whose volume follows the action.
