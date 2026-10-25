@@ -90,7 +90,9 @@ function teleport(s, x, y) {
 }
 
 canvas.addEventListener('pointerdown', function (e) {
-  e.preventDefault();
+  e.preventDefault();                                                // (this also stops the browser giving the page key focus,
+  canvas.focus({ preventScroll: true });                             //  so take it: inside itch.io's frame keys go nowhere otherwise)
+  window.focus();
   unlockAudio();                                                     // browsers only allow sound after a press
   const p = pointerPos(e);
   input.hx = p.x; input.hy = p.y;
@@ -180,7 +182,7 @@ window.addEventListener('keydown', function (e) {
   if (game.state === 'won') { winKey(game, e.key); return; }        // typing a name for the leaderboard
   if (game.state === 'title' && titleKey(k)) return;                 // menu and credits
   if (game.state === 'intro' && (k === 'enter' || k === ' ' || k === 'escape')) { startGame(); return; }
-  if (k === 'escape') {                                              // Esc opens and closes the menu
+  if (k === 'escape' || k === 'p') {                                 // Esc (or P: in fullscreen the browser keeps Esc) opens and closes the menu
     if (game.state === 'play') pauseGame(); else if (game.state === 'paused') resumeGame();
     return;
   }

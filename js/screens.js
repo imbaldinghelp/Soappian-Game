@@ -544,7 +544,7 @@ function drawPause(input) {
   drawButton(RESUME_BTN, 'RESUME', 2, hovering(input, RESUME_BTN));
   drawSurfaceGuide(Math.round((LOW_W - GUIDE_W) / 2), RESUME_BTN.y + RESUME_BTN.h + 8);
   drawButton(MENU_BTN, 'TITLE MENU', 2, hovering(input, MENU_BTN));
-  drawTextC('ESC TO RESUME', LOW_W / 2, 163, 1, PAL.silver);
+  drawTextC('ESC OR P TO RESUME', LOW_W / 2, 163, 1, PAL.silver);
 }
 
 // Everything drawn over the world, by game state.

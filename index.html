@@ -11,6 +11,7 @@
   canvas {
     /* main.js sizes it to fill the window (16:9); the last bit of stretch is smooth on purpose */
     touch-action: none;
+    outline: none;                                   /* it takes key focus when clicked; no focus ring */
     user-select: none;
     -webkit-user-select: none;
     -webkit-tap-highlight-color: transparent;
@@ -20,7 +21,7 @@
 </style>
 </head>
 <body>
-<canvas id="game"></canvas>
+<canvas id="game" tabindex="0"></canvas>
 <script src="js/config.js"></script>
 <script src="js/level.js"></script>
 <script src="js/soap.js"></script>
