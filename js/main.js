@@ -230,8 +230,10 @@ function update(dt) {
     fxUpdate(game, dt);
     setWind(FX.wind);
     setSlide(0);
+    setMusicLevel(MUSIC_PAUSE_DUCK);
     return;
   }
+  setMusicLevel(1);
   if (game.tauntT > 0) game.tauntT -= dt;
 
   if (game.state === 'intro') {

@@ -23,6 +23,8 @@ bg_towel.png
 bg_sink.png
 title.png          320 x 180   title screen backdrop (the logo and START button are drawn on top)
 
+Music: Soappian_BGM.mp3 in audio/ (MUSIC_FILE in js/config.js) loops for the whole game. Volume is MUSIC_VOLUME.
+
 Sounds live in audio/ and are listed in SOUND_FILES in js/config.js (WAV, OGG or MP3, any file name).
 In use: Hitting ground (flops only; ordinary landings are silent), Hitting pump soap (the win),
 falling (free-fall loop), sliding on wet (loop). Still synthesised until a file is added: jump, click, push, whistle, clang, bounce, bonk.
