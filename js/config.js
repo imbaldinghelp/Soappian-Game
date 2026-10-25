@@ -131,6 +131,11 @@ const SOUND_VOLUME = 0.5;                 // master volume, 0 to 1
 const LOOP_VOLUME = { wind: 1.0, slide: 0.9 };   // loudness of the looping recordings at full level
 const SLIDE_FULL = 900;                   // sliding on wet this fast (px/s) plays the slide sound at full volume
 const USE_SOUND_FILES = true;             // false = synth placeholders only
+// Background music: the team's own song (jam rules: human-made), looped for the whole game. It plays through the
+// same master volume and S mute as the effects, and ducks while the game is paused.
+const MUSIC_FILE = 'assets/audio/Soappian_BGM.mp3';
+const MUSIC_VOLUME = 0.35;                // loudness of the song under the effects, 0 to 1 (the song itself is loud)
+const MUSIC_PAUSE_DUCK = 0.4;             // while paused the song drops to this fraction
 const SFX = 'assets/audio/SFX/SFX/';
 const SOUND_FILES = {
   flop: SFX + 'Hitting ground.mp3',       // landing flat after a fall (played lower and heavier). Ordinary landings are silent

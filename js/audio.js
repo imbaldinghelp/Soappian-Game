@@ -3,7 +3,7 @@
 // Two sounds loop and follow the action: 'wind' (free fall) and 'slide' (sliding on wet).
 // Browsers only allow sound after the first click or tap, so main.js calls unlockAudio() from the first press.
 
-const AUDIO = { ctx: null, master: null, noise: null, wind: null, windLevel: 0, loops: {}, files: {}, muted: false };
+const AUDIO = { ctx: null, master: null, noise: null, wind: null, windLevel: 0, loops: {}, files: {}, muted: false, musicBuf: null, music: null };
 
 try { AUDIO.muted = localStorage.getItem('soappian-muted') === '1'; } catch (e) { /* storage blocked: start unmuted */ }
 
@@ -20,6 +20,7 @@ function unlockAudio() {
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     AUDIO.noise = n;
     if (USE_SOUND_FILES) loadSoundFiles();
+    loadMusic();
   }
   if (AUDIO.ctx.state === 'suspended') AUDIO.ctx.resume();
 }
@@ -32,6 +33,32 @@ function loadSoundFiles() {
       .then(function (buf) { buf.trim = soundBounds(buf); AUDIO.files[name] = buf; })
       .catch(function () { /* missing file: keep the synth sound */ });
   });
+}
+
+// The background song: loads once, then loops the whole file for good (no trimming, it has no dead air at the ends).
+function loadMusic() {
+  fetch(encodeURI(MUSIC_FILE))
+    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+    .then(function (b) { return AUDIO.ctx.decodeAudioData(b); })
+    .then(function (buf) { AUDIO.musicBuf = buf; startMusic(); })
+    .catch(function () { /* missing file: the game just plays without a song */ });
+}
+function startMusic() {
+  if (!AUDIO.ctx || !AUDIO.musicBuf || AUDIO.music) return;
+  const src = AUDIO.ctx.createBufferSource();
+  src.buffer = AUDIO.musicBuf; src.loop = true;
+  const g = AUDIO.ctx.createGain();
+  g.gain.value = MUSIC_VOLUME;
+  src.connect(g); g.connect(AUDIO.master);
+  src.start(0);
+  AUDIO.music = { gain: g, level: 1 };
+}
+// 1 = full song volume, lower to duck it (the pause menu). Called every frame, only acts on a real change.
+function setMusicLevel(level) {
+  const m = AUDIO.music;
+  if (!m || Math.abs(level - m.level) < 0.01) return;
+  m.level = level;
+  m.gain.gain.setTargetAtTime(MUSIC_VOLUME * level, AUDIO.ctx.currentTime, 0.15);
 }
 
 // Where the sound in a recording starts and ends (skips silence), so loops repeat without a gap.
