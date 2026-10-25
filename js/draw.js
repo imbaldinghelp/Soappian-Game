@@ -1,9 +1,9 @@
-// draw.js - the world, drawn in soft 8-bit style. The game is drawn straight onto the page canvas at
-// LOW_W x LOW_H (320 x 180) pixels, and main.js stretches it to fill the window with hard pixel edges. Flat pixel shapes by default; set USE_ART
+// draw.js - the world, drawn in soft 8-bit style. The game is drawn on an off-screen canvas of
+// LOW_W x LOW_H (320 x 180) pixels, and main.js blows it up onto the page canvas to fill the window. Flat pixel shapes by default; set USE_ART
 // in config.js to use Aaron's PNGs from the assets folder (missing files fall back to shapes).
 // Menus, HUD and the intro live in screens.js; this file draws the level, the soap, the pump and effects.
 
-const low = document.getElementById('game');
+const low = document.createElement('canvas');   // main.js copies it onto the page canvas every frame
 low.width = LOW_W;
 low.height = LOW_H;
 let L = low.getContext('2d');             // what R() and friends draw on (spriteOf points it elsewhere for a moment)
@@ -273,7 +273,7 @@ function drawMaterialRow(x0, ry, key) {
   drawText(sf.name, x0 + 23, ry, 1, PAL.white);
   for (let j = 0; j < 5; j++) {
     const fill = Math.max(0, Math.min(1, sf.slip - j));
-    R(x0 + 68 + j * 5, ry + 1, 4, 5, PAL.navy);
+    R(x0 + 68 + j * 5, ry + 1, 4, 5, PAL.charcoal);
     if (fill > 0) R(x0 + 68 + j * 5, ry + 1, Math.round(4 * fill), 5, sf.body);
   }
   if (z !== undefined) drawText('Z' + (z + 1), x0 + 98, ry, 1, PAL.lime);
@@ -285,19 +285,33 @@ function drawSurfaceGuide(x0, y0) {
   MATERIALS.forEach(function (k, i) { drawMaterialRow(x0, y0 + 15 + i * 10, k); });
 }
 
+// The board where a material first turns up: framed in the material's own colour, with a NEW SURFACE tab.
 function drawMaterialSign(x0, y0, key) {
-  R(x0 + 2, y0 + 2, GUIDE_W, SIGN_H, PAL.ink); box(x0, y0, GUIDE_W, SIGN_H, PAL.deepnavy); R(x0 + 1, y0 + 1, GUIDE_W - 2, 1, PAL.lilac);
+  const sf = SURFACES[key], tag = 'NEW SURFACE', tw = textWidth(tag, 1) + 8;
+  const tab = Math.floor(now() * 1.2) % 2 ? PAL.yellow : PAL.cream;   // a gentle blink, to catch the eye
+  R(x0 + 6, y0 - 8, tw, 9, PAL.ink); R(x0 + 5, y0 - 9, tw, 9, PAL.ink); R(x0 + 6, y0 - 8, tw - 2, 8, tab);
+  drawText(tag, x0 + 9, y0 - 7, 1, PAL.ink, true);
+  R(x0 + 2, y0 + 2, GUIDE_W, SIGN_H, PAL.ink); box(x0, y0, GUIDE_W, SIGN_H, PAL.deepnavy);
+  outline(x0 + 1, y0 + 1, GUIDE_W - 2, SIGN_H - 2, sf.body);
   drawMaterialRow(x0, y0 + 4, key);
 }
 
 // ---------- scenery (no collision). x = centre, y = the surface it stands on, in art pixels ----------
 const DECO = {
-  sign: function (x, y, d) {
-    const tw = textWidth(d.text, 1), bw = tw + 6, bx = x - Math.round(bw / 2), by = d.wall ? y - 11 : y - 18;
+  sign: function (x, y, d) {                            // '|' splits lines; d.key: a key cap after the last line
+    const lines = d.text.split('|'), kw = d.key ? textWidth(d.key, 1) + 6 : 0, last = lines.length - 1;
+    const widths = lines.map(function (l, i) { return textWidth(l, 1) + (i === last && kw ? kw + 5 : 0); });
+    const bw = Math.max.apply(null, widths) + 8, bh = 4 + lines.length * 11, bx = x - Math.round(bw / 2), by = d.wall ? y - bh : y - bh - 7;
     if (!d.wall) R(x - 1, y - 7, 2, 7, PAL.rust);         // post
-    box(bx, by, bw, 11, PAL.taupe);
-    R(bx + 1, by + 1, bw - 2, 1, PAL.peach);
-    drawText(d.text, bx + 3, by + 2, 1, PAL.ink, true);
+    R(bx + 2, by + 2, bw, bh, PAL.ink); box(bx, by, bw, bh, PAL.deepnavy); outline(bx + 1, by + 1, bw - 2, bh - 2, PAL.yellow);
+    lines.forEach(function (l, i) {
+      const lx = x - Math.round(widths[i] / 2), ly = by + 4 + i * 11;
+      drawText(l, lx, ly, 1, i === 0 ? PAL.yellow : PAL.cream);
+      if (i !== last || !kw) return;
+      const kx = lx + textWidth(l, 1) + 5, down = Math.floor(now() * 1.5) % 3 === 0 ? 1 : 0;   // the key, pressed now and then
+      R(kx, ly - 1, kw, 11, PAL.ink); box(kx, ly - 3 + down, kw, 12 - down, PAL.white); R(kx + 1, ly + 7, kw - 2, 1, PAL.silver);
+      drawText(d.key, kx + 3, ly - 1 + down, 1, PAL.ink, true);
+    });
   },
   paperball: function (x, y) { box(x - 3, y - 5, 7, 5, PAL.white); R(x - 1, y - 3, 2, 1, PAL.silver); R(x + 1, y - 2, 1, 1, PAL.silver); },
   peel: function (x, y) { R(x - 4, y - 2, 8, 2, PAL.yellow); R(x - 4, y - 3, 2, 1, PAL.yellow); R(x + 2, y - 3, 2, 1, PAL.yellow); R(x - 5, y - 1, 1, 1, PAL.brown); R(x + 4, y - 1, 1, 1, PAL.brown); R(x - 4, y - 1, 8, 1, PAL.orange); },
@@ -429,7 +443,7 @@ function drawDeco(d, vx0, vy0, vx1, vy1) {
   const x = px(d.x), y = px(d.y);
   const rw = Math.max(40, px(d.w)), rh = Math.max(40, px(d.h));
   if (x + rw < vx0 || x - rw > vx1 || y < vy0 || y - rh > vy1) return;
-  DECO[d.kind](x, y, { w: px(d.w), h: px(d.h), text: d.text, wall: d.wall, bg: LEVEL.zones[zoneIndex(d.y - 1)].bg });
+  DECO[d.kind](x, y, { w: px(d.w), h: px(d.h), text: d.text, wall: d.wall, key: d.key, bg: LEVEL.zones[zoneIndex(d.y - 1)].bg });
 }
 
 // ---------- the pump soap ----------
@@ -759,6 +773,10 @@ function drawDebug(game, camX, camY) {
   lines.forEach(function (l, i) { drawText(l, 4, 22 + i * 9, 1, PAL.lime, true); });
 }
 
+// Screen shake: -1, 0 or 1 art pixel, picked SHAKE_RATE times a second. A new pick every drawn frame
+// (144 a second on a fast screen) flickers instead of rumbling.
+function shakeAt(k) { const v = Math.sin(k * 12.9898) * 43758.5453; return Math.round((v - Math.floor(v) - 0.5) * 2.9); }
+
 // ---------- one whole frame ----------
 function drawFrame(game, input, flags) {
   L.setTransform(1, 0, 0, 1, 0, 0);
@@ -776,7 +794,7 @@ function drawFrame(game, input, flags) {
     drawText('MAP  PRESS M TO CLOSE', 4, 4, 1, PAL.white);
   } else {
     let camX = Math.round(game.cam.x / PIXEL), camY = Math.round(game.cam.y / PIXEL);
-    if (FX.shake > 0 || FX.wind > 0.7) { camX += Math.round((Math.random() - 0.5) * 3); camY += Math.round((Math.random() - 0.5) * 3); }
+    if (FX.shake > 0 || FX.wind > 0.7) { const k = Math.floor(now() * SHAKE_RATE); camX += shakeAt(k); camY += shakeAt(k + 77); }
     const aim = input.aiming ? aimDirection(input) : null;
     L.save();
     L.translate(-camX, -camY);

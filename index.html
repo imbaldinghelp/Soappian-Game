@@ -9,8 +9,7 @@
   html, body { margin: 0; height: 100%; background: #1f1d36; overflow: hidden; }
   body { display: flex; align-items: center; justify-content: center; }
   canvas {
-    /* 320 x 180, stretched by main.js to fill the window (16:9) with hard pixel edges */
-    image-rendering: pixelated;
+    /* main.js sizes it to fill the window (16:9); the last bit of stretch is smooth on purpose */
     touch-action: none;
     user-select: none;
     -webkit-user-select: none;

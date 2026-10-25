@@ -361,19 +361,101 @@ function drawHud(game, input) {
   const pumpY = top + Math.round((LEVEL.pump.y / WORLD_H) * bh);
   R(bx + 1, pumpY, 3, 3, PAL.red);
 
-  if (game.state === 'play' && game.shots === 0) {                      // first-shot hint
-    const msg = input.aiming ? 'LET GO WHEN THE METER IS HIGH' : 'PRESS AND DRAG BACK TO AIM';
-    const w = textWidth(msg, 1) + 10, x = LOW_W - 18 - w;                // right side: clear of the board over the bin
-    box(x, 22, w, 13, PAL.deepnavy); drawText(msg, x + 5, 25, 1, PAL.cream);
-  }
-
   if (game.tauntT > 0) {                                                 // taunt from the pump soap, up top, clear of the soap
-    const tw = textWidth(game.taunt, 1), bw = tw + 26, bx2 = Math.round((LOW_W - bw) / 2), by = 22;
-    rr(bx2 - 1, by - 1, bw + 2, 18, PAL.ink); rr(bx2, by, bw, 16, PAL.white);
-    box(bx2 + 3, by + 2, 9, 12, PAL.red); R(bx2 + 5, by + 5, 2, 2, PAL.white); R(bx2 + 8, by + 5, 2, 2, PAL.white);
-    R(bx2 + 5, by + 9, 5, 1, PAL.ink);
-    drawText(game.taunt, bx2 + 17, by + 5, 1, PAL.ink, true);
+    const lines = game.taunt.split('|'), extra = (lines.length - 1) * 9;  // '|' splits lines (the whisper has two)
+    const tw = Math.max.apply(null, lines.map(function (l) { return textWidth(l, 1); }));
+    const bw = tw + 26, bx2 = Math.round((LOW_W - bw) / 2), by = 22, fy = by + 2 + Math.round(extra / 2);
+    rr(bx2 - 1, by - 1, bw + 2, 18 + extra, PAL.ink); rr(bx2, by, bw, 16 + extra, PAL.white);
+    box(bx2 + 3, fy, 9, 12, PAL.red); R(bx2 + 5, fy + 3, 2, 2, PAL.white); R(bx2 + 8, fy + 3, 2, 2, PAL.white);
+    R(bx2 + 5, fy + 7, 5, 1, PAL.ink);
+    lines.forEach(function (l, i) { drawText(l, bx2 + 17, by + 5 + i * 9, 1, i > 0 ? PAL.crimson : PAL.ink, true); });
   }
+}
+
+// ---------- starter checklist (top left) and a ghost mouse acting out a shot next to the soap ----------
+// Each line ticks itself off (checkOff, called from main.js) and gets struck through; once both are done the
+// list fades away. Kept for the whole visit, so a restart does not bring it back. The ghost shows until the first shot.
+const CHECKLIST = [
+  { key: 'aim', text: 'DRAG BACK TO AIM' },
+  { key: 'manual', text: 'OPEN SURFACE MANUAL', cap: 'ESC' },
+];
+const CHECK = { aim: false, manual: false, seen: {}, goneAt: 0 };
+const CHECK_HOLD = 1.5;                   // seconds the finished list stays up before it fades
+const CHECK_FADE = 0.6;                   // seconds of fading
+const TUT_LOOP = 2.6;                     // seconds per ghost demo: appear, press, drag back, hold, let go
+const TUT_PRESS = { x: 70, y: -32 };      // where the ghost presses, art px from the soap's middle (open space to its right)
+const TUT_DRAG = { x: -24, y: 20 };       // how far it drags back (down and left, so the shot goes up and right)
+const CURSOR_ROWS = ['1', '11', '121', '1221', '12221', '122221', '1222221', '12222221', '1222111', '121121', '11 121', '   11'];
+
+function checkOff(key) { CHECK[key] = true; }
+
+function drawKeyCap(text, x, y) {                                         // a little keyboard key, top-left at (x, y)
+  const w = textWidth(text, 1) + 6;
+  R(x, y + 2, w, 10, PAL.ink); box(x, y, w, 11, PAL.white); R(x + 1, y + 9, w - 2, 1, PAL.silver);
+  drawText(text, x + 3, y + 2, 1, PAL.ink, true);
+  return w;
+}
+
+function drawChecklist() {
+  if (CHECK.aim && CHECK.manual && !CHECK.goneAt) CHECK.goneAt = now() + CHECK_HOLD;
+  const fade = CHECK.goneAt ? Math.max(0, Math.min(1, (CHECK.goneAt + CHECK_FADE - now()) / CHECK_FADE)) : 1;
+  if (fade <= 0) return;
+  const x = 4, y = 16, w = 160, h = 6 + CHECKLIST.length * 14;
+  L.globalAlpha = 0.55 * fade; R(x, y, w, h, PAL.ink); L.globalAlpha = fade;   // see-through backing
+  outline(x, y, w, h, PAL.lilac);
+  CHECKLIST.forEach(function (it, i) {
+    const done = CHECK[it.key], ry = y + 5 + i * 14, tx = x + 16;
+    if (done && CHECK.seen[it.key] === undefined) CHECK.seen[it.key] = now();       // the strike draws itself from here
+    box(x + 5, ry, 9, 9, done ? PAL.deepnavy : PAL.white);
+    if (done) {                                                           // a tick
+      R(x + 6, ry + 4, 1, 2, PAL.lime); R(x + 7, ry + 5, 1, 2, PAL.lime); R(x + 8, ry + 6, 1, 2, PAL.lime);
+      R(x + 9, ry + 5, 1, 2, PAL.lime); R(x + 10, ry + 3, 1, 3, PAL.lime); R(x + 11, ry + 2, 1, 2, PAL.lime); R(x + 12, ry + 1, 1, 2, PAL.lime);
+    }
+    drawText(it.text, tx, ry + 1, 1, done ? PAL.slate : PAL.white);
+    let tw = textWidth(it.text, 1);
+    if (it.cap) tw += 4 + drawKeyCap(it.cap, tx + tw + 4, ry - 1);
+    if (done) {                                                           // struck through
+      const k = Math.min(1, (now() - CHECK.seen[it.key]) / 0.25);
+      R(tx - 1, ry + 4, Math.round((tw + 2) * k), 1, PAL.cream);
+    }
+  });
+  L.globalAlpha = 1;
+}
+
+function drawCursor(x, y) {                                               // a mouse pointer, tip at (x, y)
+  CURSOR_ROWS.forEach(function (row, r) {
+    for (let c = 0; c < row.length; c++) if (row[c] !== ' ') R(x + c, y + r, 1, 1, row[c] === '1' ? PAL.ink : PAL.white);
+  });
+}
+
+// The ghost: same marks as real aiming (press box, rubber band, aim dots), on a loop, until the first shot.
+function drawGhostShot(game, input, camX, camY) {
+  const s = game.soap;
+  if (CHECK.aim || input.aiming || !s.canAim) return;
+  const sx = px(s.x + s.w / 2) - camX, sy = px(s.y + s.h / 2) - camY;
+  const t = now() % TUT_LOOP;
+  const k = Math.max(0, Math.min(1, (t - 0.6) / 0.9)), e = k * k * (3 - 2 * k);   // the drag, eased
+  const x0 = sx + TUT_PRESS.x, y0 = sy + TUT_PRESS.y;
+  const cx = Math.round(x0 + TUT_DRAG.x * e), cy = Math.round(y0 + TUT_DRAG.y * e);
+  const pressed = t > 0.45 && t < 1.9, len = Math.hypot(TUT_DRAG.x, TUT_DRAG.y);
+  if (t > 2.3) return;
+  if (pressed) {
+    const n = Math.max(1, Math.floor(Math.hypot(cx - x0, cy - y0) / 3));   // rubber band from the press point
+    for (let i = 0; i <= n; i++) R(Math.round(x0 + (cx - x0) * i / n), Math.round(y0 + (cy - y0) * i / n), 1, 1, PAL.silver);
+    box(x0 - 2, y0 - 2, 5, 5, PAL.white);
+    if (t < 0.65) outline(x0 - 4, y0 - 4, 9, 9, PAL.yellow);            // the click
+    const ax = -TUT_DRAG.x / len, ay = -TUT_DRAG.y / len;                // aim: away from the drag
+    for (let d = 13; d <= 13 + 30 * e; d += 4) {
+      const qx = Math.round(sx + ax * d), qy = Math.round(sy + ay * d);
+      R(qx - 1, qy - 1, 3, 3, PAL.ink); R(qx, qy, 1, 1, PAL.yellow);
+    }
+  } else if (t >= 1.9) {                                                  // let go: a little burst where the shot goes
+    const bx = Math.round(sx - TUT_DRAG.x / len * 70), by = Math.round(sy - TUT_DRAG.y / len * 70);
+    R(bx - 3, by, 7, 1, PAL.yellow); R(bx, by - 3, 1, 7, PAL.yellow); R(bx - 2, by - 2, 1, 1, PAL.cream); R(bx + 2, by + 2, 1, 1, PAL.cream);
+    drawText('GO!', bx + 5, by - 8, 1, PAL.yellow);
+  }
+  drawCursor(cx, cy);
+  if (pressed) drawText('DRAG', cx + 9, cy + 3, 1, PAL.cream);
 }
 
 // ---------- win screen: your run and a name to save it under (left), the leaderboard (right) ----------
@@ -468,7 +550,10 @@ function drawPause(input) {
 // Everything drawn over the world, by game state.
 function drawOverlay(game, input, camX, camY) {
   if (game.state === 'intro') drawIntro(game, camX, camY);
-  else if (game.state === 'play' || game.state === 'winning') drawHud(game, input);
+  else if (game.state === 'play' || game.state === 'winning') {
+    if (game.state === 'play') { drawChecklist(); drawGhostShot(game, input, camX, camY); }
+    drawHud(game, input);                                                // after the checklist: taunts sit on top of it
+  }
   else if (game.state === 'paused') { drawHud(game, input); drawPause(input); }
   else if (game.state === 'won') drawWin(game, input);
 }

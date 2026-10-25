@@ -1,18 +1,26 @@
 // main.js - starts the game: canvas, mouse and touch input, game loop, camera, restart.
 // Also the glue between the rules and the senses: events from soap.js become sounds and effects here.
 
-const canvas = document.getElementById('game');                    // its pixel size is set by draw.js
+const canvas = document.getElementById('game');                    // the page canvas; the game is drawn on draw.js's low
+const page = canvas.getContext('2d', { alpha: false });
 
-// Fill the window, keeping 16:9. The 320 x 180 canvas is stretched by CSS with hard pixel edges, so a scale that
-// is not a whole number makes some art pixels one screen pixel wider than others. Do not copy it onto a big
-// full-screen canvas instead: on integrated graphics at 144 Hz that drops about 1 frame in 12 (tested).
+// Fill the window, keeping 16:9. Each frame the 320 x 180 picture is copied onto the page canvas blown up by the
+// biggest whole step that fits the screen pixels (every art pixel the same size), and the browser stretches that
+// the last little bit to fill the window, smoothly. Tested on integrated graphics at 144 Hz, these both went wrong:
+// - CSS-stretching the 320 x 180 canvas by a fraction with hard edges: art pixels come out 5 or 6 screen pixels
+//   wide, and lines change thickness as the camera scrolls, which looks like glitching during falls.
+// - a page canvas bigger than the screen (rounding the step up) shrunk to fit: drops about 1 frame in 12.
 function fitCanvas() {
   const k = Math.min(window.innerWidth / LOW_W, window.innerHeight / LOW_H);
+  const n = Math.max(1, Math.floor(k * (window.devicePixelRatio || 1) + 0.01));
+  canvas.width = LOW_W * n; canvas.height = LOW_H * n;
   canvas.style.width = Math.floor(LOW_W * k) + 'px';
   canvas.style.height = Math.floor(LOW_H * k) + 'px';
 }
 window.addEventListener('resize', fitCanvas);
 fitCanvas();
+
+function present() { page.imageSmoothingEnabled = false; page.drawImage(low, 0, 0, canvas.width, canvas.height); }
 
 let game = newGame();
 // ox, oy = press start; hx, hy = hover (virtual screen px). queued = a shot let go in the air, waiting to touch down.
@@ -61,7 +69,7 @@ function backToTitle() {
 }
 
 // Esc menu. Pausing drops any half-made aim, so nothing fires on resume.
-function pauseGame() { game.state = 'paused'; input.aiming = false; input.queued = null; }
+function pauseGame() { game.state = 'paused'; input.aiming = false; input.queued = null; checkOff('manual'); }
 function resumeGame() { game.state = 'play'; }
 
 snapCamera();
@@ -191,6 +199,7 @@ function handleEvents() {
   for (const ev of game.events) {
     const d = ev.data;
     if (ev.type === 'launch') {
+      checkOff('aim');
       playSound('jump', d.p);
       fxBurst('bubble', d.x, d.y, 4 + Math.round(d.p * 6), PAL.white);
     } else if (ev.type === 'land') {
@@ -210,6 +219,9 @@ function handleEvents() {
       playSound('bonk', k);
       fxBurst('dust', d.x, d.y, 2 + Math.round(k * 5), PAL.silver);
     } else if (ev.type === 'flop') {                                 // landed flat after a fall
+      if (!flags.debug && (game.falls === WHISPER_FALL || (game.falls > WHISPER_FALL && Math.random() < WHISPER_CHANCE))) {
+        game.taunt = WHISPER; game.tauntT = WHISPER_TIME;            // the pump soap's secret instead of a taunt
+      }
       playSound('flop');
       fxBurst('dust', d.x, d.y, 14, PAL.silver);
       fxShake(0.3);
@@ -282,6 +294,7 @@ function frame(nowMs) {
   last = nowMs;
   while (acc >= DT) { update(DT); acc -= DT; }
   drawFrame(game, input, flags);
+  present();
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

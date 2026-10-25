@@ -43,6 +43,7 @@ const SIDE_BOUNCE = 0.6;                  // hitting the side of any platform or
 const SLIDE_COLORS = { light: '#fff6c9', body: '#ffe27a', band: '#f2c14e', edge: '#2b2c42' };   // yellow playground slide
 const BOUNCE_FX_MIN = 300;                // a ricochet faster than this (px/s) makes a boing and sparks
 const SUBSTEPS = 8;                       // physics steps per frame (stops fast shots tunnelling)
+const SHAKE_RATE = 30;                    // how many times a second the screen shake jumps (falls, hard landings)
 const CAMERA_FOLLOW = 10;                 // how fast the camera catches up with the soap (bigger = tighter)
 
 // ---- Squeeze meter (p runs 0 to 1) ----
@@ -117,6 +118,13 @@ const TAUNTS = [
   'your so cute',
   'enjoy the view from the floor',
 ];
+
+// The pump soap's secret: it whispers about debug mode on fall number WHISPER_FALL of a run, then on any later fall
+// with WHISPER_CHANCE (never while debug is on). '|' splits the two lines.
+const WHISPER = 'pssst.. press D for debug mode|only do it if you are a COWARD';
+const WHISPER_FALL = 3;
+const WHISPER_CHANCE = 0.1;
+const WHISPER_TIME = 4;                   // seconds it stays up (longer than a taunt: two lines to read)
 
 // ---- Intro cutscene (seconds unless noted). Click skips it. ----
 const INTRO_TALK = 1.6;                   // pump soap gloats before pushing

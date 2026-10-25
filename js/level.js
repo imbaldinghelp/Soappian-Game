@@ -21,7 +21,7 @@ function plat(col, row, w, surface, o) {
 }
 function deco(kind, col, row, o) {
   o = o || {};
-  return { kind: kind, x: col * TILE_PX, y: row * TILE_PX, w: (o.w || 0) * TILE_PX, h: (o.h || 0) * TILE_PX, text: o.text || '', wall: !!o.wall };
+  return { kind: kind, x: col * TILE_PX, y: row * TILE_PX, w: (o.w || 0) * TILE_PX, h: (o.h || 0) * TILE_PX, text: o.text || '', wall: !!o.wall, key: o.key || '' };
 }
 // slide(col0, row0, col1, row1) is a tilted chute from one point to the other (halves are fine): see LEVEL.slides.
 function slide(c0, r0, c1, r1) { return { x0: c0 * TILE_PX, y0: r0 * TILE_PX, x1: c1 * TILE_PX, y1: r1 * TILE_PX }; }
@@ -137,12 +137,12 @@ const LEVEL = {
   decor: [
     deco('bin', 4, 138, { w: 6, h: 4 }), deco('paperball', 8.5, 138), deco('paperball', 13.5, 138),
     deco('plant', 25.5, 138), deco('peel', 18, 138),
-    deco('sign', 6, 131.9, { text: 'SURFACE MANUAL: PRESS ESC', wall: true }),
-    deco('material', 6, 133.3, { text: 'plastic' }),
+    deco('material', 6, 132.3, { text: 'plastic' }),
 
     deco('material', 8, 112.6, { text: 'ceramic' }),
 
-    deco('material', 5.5, 86.6, { text: 'seat' }), deco('material', 24.5, 86.6, { text: 'wet' }),
+    deco('material', 6.5, 75.6, { text: 'seat' }),   // above the toilet bowl
+    deco('material', 24.5, 86.6, { text: 'wet' }),
     deco('lid', 7, 79, { w: 3, h: 3 }),
 
     deco('material', 9, 53.6, { text: 'towel' }),

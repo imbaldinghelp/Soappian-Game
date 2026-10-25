@@ -3,7 +3,7 @@
 // Two sounds loop and follow the action: 'wind' (free fall) and 'slide' (sliding on wet).
 // Browsers only allow sound after the first click or tap, so main.js calls unlockAudio() from the first press.
 
-const AUDIO = { ctx: null, master: null, noise: null, wind: null, windLevel: 0, loops: {}, files: {}, muted: false, musicBuf: null, music: null };
+const AUDIO = { ctx: null, master: null, noise: null, wind: null, windLevel: 0, loops: {}, files: {}, muted: false, music: null };
 
 try { AUDIO.muted = localStorage.getItem('soappian-muted') === '1'; } catch (e) { /* storage blocked: start unmuted */ }
 
@@ -19,39 +19,41 @@ function unlockAudio() {
     const d = n.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     AUDIO.noise = n;
-    if (USE_SOUND_FILES) loadSoundFiles();
-    loadMusic();
+    startMusic();
   }
   if (AUDIO.ctx.state === 'suspended') AUDIO.ctx.resume();
 }
 
+// The recordings are fetched and decoded as soon as the page opens (an OfflineAudioContext needs no click),
+// so nothing heavy is left for the moment the player presses PLAY. A buffer decoded here plays in the real
+// context too (resampled if its rate differs).
 function loadSoundFiles() {
+  const OAC = window.OfflineAudioContext;
+  if (!OAC) return;
+  const decoder = new OAC(1, 1, 48000);
   Object.keys(SOUND_FILES).forEach(function (name) {
     fetch(encodeURI(SOUND_FILES[name]))                 // file names may have spaces
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
-      .then(function (b) { return AUDIO.ctx.decodeAudioData(b); })
+      .then(function (b) { return decoder.decodeAudioData(b); })
       .then(function (buf) { buf.trim = soundBounds(buf); AUDIO.files[name] = buf; })
       .catch(function () { /* missing file: keep the synth sound */ });
   });
 }
 
-// The background song: loads once, then loops the whole file for good (no trimming, it has no dead air at the ends).
-function loadMusic() {
-  fetch(encodeURI(MUSIC_FILE))
-    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
-    .then(function (b) { return AUDIO.ctx.decodeAudioData(b); })
-    .then(function (buf) { AUDIO.musicBuf = buf; startMusic(); })
-    .catch(function () { /* missing file: the game just plays without a song */ });
-}
+// The background song streams through an <audio> element, decoded bit by bit as it plays. Do not decode it whole
+// with decodeAudioData: the 6 MB MP3 becomes about 90 MB of samples and stalls the first seconds of play (tested).
+// It goes through the master volume like everything else, so S mutes it. A missing file just means no song.
+const musicEl = new Audio();
+musicEl.loop = true;
+musicEl.preload = 'auto';
+musicEl.src = encodeURI(MUSIC_FILE);
 function startMusic() {
-  if (!AUDIO.ctx || !AUDIO.musicBuf || AUDIO.music) return;
-  const src = AUDIO.ctx.createBufferSource();
-  src.buffer = AUDIO.musicBuf; src.loop = true;
+  if (!AUDIO.ctx || AUDIO.music) return;
   const g = AUDIO.ctx.createGain();
   g.gain.value = MUSIC_VOLUME;
-  src.connect(g); g.connect(AUDIO.master);
-  src.start(0);
+  AUDIO.ctx.createMediaElementSource(musicEl).connect(g); g.connect(AUDIO.master);
   AUDIO.music = { gain: g, level: 1 };
+  musicEl.play().catch(function () { /* no file, or not allowed yet */ });
 }
 // 1 = full song volume, lower to duck it (the pause menu). Called every frame, only acts on a real change.
 function setMusicLevel(level) {
@@ -218,3 +220,5 @@ function playSound(name, strength, surface) {
   }
   if (SYNTH[name]) SYNTH[name](strength || 0, surface);
 }
+
+if (USE_SOUND_FILES) loadSoundFiles();
