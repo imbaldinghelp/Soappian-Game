@@ -17,7 +17,7 @@
 
 function plat(col, row, w, surface, o) {
   o = o || {};
-  return { x: col * TILE_PX, y: row * TILE_PX, w: w * TILE_PX, h: (o.h || LEDGE_TILES) * TILE_PX, surface: surface, push: o.push || 0 };
+  return { x: col * TILE_PX, y: row * TILE_PX, w: w * TILE_PX, h: (o.h || LEDGE_TILES) * TILE_PX, surface: surface, push: o.push || 0, bin: !!o.bin };
 }
 function deco(kind, col, row, o) {
   o = o || {};
@@ -48,8 +48,8 @@ const LEVEL = {
     // ---- Zone 1: dustbin. PLASTIC (2 bars). (rows 111 to 138) ----
     // Learn to aim: a staircase to the right, then back to the left. The floor catches every fall here.
     plat(0, 138, 29, 'plastic', { h: 1 }),  // floor (the bin is between the first two walls)
-    plat(1, 134, 1, 'plastic', { h: 4 }),   // bin wall, left
-    plat(6, 134, 1, 'plastic', { h: 4 }),   // bin wall, right
+    plat(1, 134, 1, 'plastic', { h: 4, bin: true }),   // bin wall, left (bin: blown away at the end)
+    plat(6, 134, 1, 'plastic', { h: 4, bin: true }),   // bin wall, right
     plat(17, 136, 1, 'plastic', { h: 2 }),  // pillar
     plat(22, 135, 1, 'plastic', { h: 3 }),  // pillar
     plat(9, 135, 3, 'plastic'),
@@ -158,12 +158,14 @@ const LEVEL = {
   pumpIntroX: 6.5 * TILE_PX,
   sinkEdge: 3 * TILE_PX,
   dropX: 0.5 * TILE_PX,
+  // The dustbin's floor, middle and top of the walls: the beaten pump soap is dropped in here, and it explodes.
+  bin: { x: 4 * TILE_PX, y: 138 * TILE_PX, top: 134 * TILE_PX },
 };
 
 // Builds the list of solid shapes the physics uses: level blocks and world edges.
 function buildSolids() {
   const out = [];
-  for (const b of LEVEL.blocks) out.push({ x: b.x, y: b.y, w: b.w, h: b.h, surface: b.surface, push: b.push });
+  for (const b of LEVEL.blocks) out.push({ x: b.x, y: b.y, w: b.w, h: b.h, surface: b.surface, push: b.push, bin: b.bin });
   // world edges (bouncy walls for the soap; the flung pump soap just slides down them, see ragCollide)
   out.push({ x: -400, y: -800, w: 400, h: WORLD_H + 1600, surface: 'wall', push: 0, edge: true });
   out.push({ x: WORLD_W, y: -800, w: 400, h: WORLD_H + 1600, surface: 'wall', push: 0, edge: true });

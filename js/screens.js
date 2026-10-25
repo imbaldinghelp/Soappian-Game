@@ -8,7 +8,10 @@ const WIN_LEFT = { x: 10, y: 26, w: 140, h: 116 }, WIN_RIGHT = { x: 160, y: 26, 
 const WIN_SAVE_BTN = { x: WIN_LEFT.x + 8, y: WIN_LEFT.y + 94, w: WIN_LEFT.w - 16, h: 15 };
 const WIN_BTN = { x: WIN_LEFT.x, y: 150, w: WIN_LEFT.w, h: 20 };
 const WIN_MENU_BTN = { x: WIN_RIGHT.x, y: 150, w: WIN_RIGHT.w, h: 20 };
-const START_BTN = { x: Math.round(LOW_W / 2) - 38, y: 76, w: 76, h: 20 };
+const PLAY_BTN = { x: Math.round(LOW_W / 2) - 30, y: 74, w: 60, h: 18 };        // title menu items (the text inside)
+const CREDITS_BTN = { x: Math.round(LOW_W / 2) - 48, y: 96, w: 96, h: 18 };
+const CREDITS_CARD = { x: 60, y: 20, w: 200, h: 130 };
+const CREDITS_BACK_BTN = { x: Math.round(LOW_W / 2) - 30, y: 156, w: 60, h: 16 };
 const RESTART_BTN = { x: LOW_W - 52, y: 3, w: 48, h: 13 };
 const SOUND_BTN = { x: LOW_W - 69, y: 3, w: 14, h: 13 };
 const TITLE_SOUND_BTN = { x: LOW_W - 18, y: 4, w: 14, h: 13 };
@@ -65,26 +68,91 @@ function drawLogo(text, cx, y, size, t) {
   });
 }
 
-// ---------- title screen: a calm evening bathroom, the soap in the bin, the pump soap on the sink ----------
-const TITLE_SKY = ['#7d97dc', '#6c84cc', '#a3b8ee', '#5a70b8'];          // same colours as the towel rack zone
-const TITLE_TAUNTS = TAUNTS.filter(function (s) { return s.length <= 22; });   // short ones fit beside the logo
+// ---------- title screen: an evening bathroom, the soap in the bin, the pump soap on the sink ----------
+// A big lathery logo with a ribbon, and a short menu (PLAY, CREDITS): click, or arrow keys and Enter.
+const TITLE = { sel: 0, credits: false };
+const TITLE_ITEMS = [
+  { r: PLAY_BTN, text: 'PLAY', go: function () { playIntro(); } },
+  { r: CREDITS_BTN, text: 'CREDITS', go: function () { TITLE.credits = true; } },
+];
+const TITLE_GY = LOW_H - 30;                                              // top of the floor
+const TITLE_TRIM = 104;                                                   // where the tiled lower wall starts
+const TITLE_WALL = ['#4f63a8', '#5a70b8', '#6c84cc', '#7d97dc'];          // evening wall, darker at the top
+const TITLE_TILE = { body: '#a3b8ee', grout: '#8ea4e2', light: '#bccbf3' };
+const TITLE_FLOOR = { a: '#fff3df', b: '#ecc08e', edge: '#7a5545' };    // soft sandy floor tiles
+const TITLE_FOAM = { edge: '#8a83c4', shade: '#d9d6f2', body: '#f6f3ff', light: '#ffffff' };   // lather behind the logo
+const TITLE_TOWEL = { edge: PAL.deepplum, body: PAL.pink, band: '#e98fb3', light: '#fbd3e2' };
 const TITLE_BIN = { light: '#e0f7f0', cap: '#b5e6d8', body: '#93cfc0', edge: '#3e6b68' };   // a mint bin (just scenery here)
-const TITLE_FLOOR = { light: '#ffffff', cap: '#fff3df', body: '#ecc08e', band: '#ddab78', edge: '#7a5545' };   // soft sandy floor
+const TITLE_TAUNTS = TAUNTS.filter(function (s) { return s.length <= 22; });   // short ones fit beside the logo
+// Rising bubbles: [x, speed (px/s), radius, phase]
+const TITLE_BUBBLES = [[40, 14, 3, 0], [52, 19, 2, 0.3], [30, 11, 4, 0.55], [60, 16, 2, 0.8], [276, 13, 3, 0.15],
+  [292, 17, 2, 0.45], [264, 12, 4, 0.7], [150, 9, 2, 0.25], [196, 10, 3, 0.6], [110, 12, 2, 0.9]];
+// Lather puffs behind the logo, around its middle: [dx, dy, radius]
+const TITLE_FOAM_PUFFS = [[-92, 4, 8], [-80, -4, 11], [-58, -9, 14], [-30, -12, 15], [0, -14, 16], [30, -12, 15],
+  [58, -9, 14], [80, -4, 11], [92, 4, 8], [-70, 9, 11], [-36, 11, 13], [0, 12, 13], [36, 11, 13], [70, 9, 11]];
+
+function bubble(x, y, r) {                                                // a see-through ring with a shine
+  for (let dy = -r; dy <= r; dy++) {
+    const hw = Math.round(Math.sqrt(r * r - dy * dy));
+    const hi = Math.abs(dy) < r - 1 ? Math.round(Math.sqrt((r - 1) * (r - 1) - dy * dy)) : -1;
+    if (hi < 0) { R(x - hw, y + dy, hw * 2 + 1, 1, PAL.white); continue; }
+    R(x - hw, y + dy, hw - hi, 1, PAL.white); R(x + hi + 1, y + dy, hw - hi, 1, PAL.white);
+  }
+  R(x - Math.ceil(r / 2), y - Math.ceil(r / 2), 1, 1, PAL.white);
+}
+
+// Everything that never moves, painted once and kept: wall, tiles, floor, towel rack, mirror, shelf.
+function paintTitleBackdrop() {
+  const gy = TITLE_GY, trim = TITLE_TRIM, ce = SURFACES.ceramic;
+  const bands = [0, 26, 52, 78, trim];                                     // the wall, an 8-bit gradient
+  for (let i = 0; i < 4; i++) R(0, bands[i], LOW_W, bands[i + 1] - bands[i], TITLE_WALL[i]);
+  for (let i = 1; i < 4; i++) {                                           // checker where two bands meet
+    for (let y = bands[i] - 2; y < bands[i] + 2; y++) {
+      for (let x = y & 1; x < LOW_W; x += 2) R(x, y, 1, 1, TITLE_WALL[y < bands[i] ? i : i - 1]);
+    }
+  }
+  const tl = TITLE_TILE;                                                  // tiled lower wall
+  R(0, trim, LOW_W, gy - trim, tl.body);
+  for (let y = trim + 2; y < gy; y += 12) R(0, y, LOW_W, 1, tl.grout);
+  for (let x = 6; x < LOW_W; x += 12) R(x, trim, 1, gy - trim, tl.grout);
+  for (let y = trim + 3; y < gy; y += 12) for (let x = 7; x < LOW_W; x += 12) { R(x, y, 4, 1, tl.light); R(x, y, 1, 3, tl.light); }
+  R(0, trim - 3, LOW_W, 5, ce.band); R(0, trim - 3, LOW_W, 1, ce.light); R(0, trim - 2, LOW_W, 2, ce.body);   // trim
+  R(0, gy - 4, LOW_W, 4, ce.body); R(0, gy - 4, LOW_W, 1, ce.light); R(0, gy - 1, LOW_W, 1, ce.band);         // skirting
+
+  const fl = TITLE_FLOOR, vy = gy - 40;                                   // floor tiles running back to the wall
+  for (let y = gy; y < LOW_H; y++) {
+    const z = 600 / (y - vy), row = Math.floor(z / 1.6);
+    let x0 = 0, last = -1;
+    for (let x = 0; x <= LOW_W; x++) {
+      const c = x < LOW_W ? (Math.floor((x - LOW_W / 2) * z / 40 / 7) + row) & 1 : -1;
+      if (c !== last) { if (last >= 0) R(x0, y, x - x0, 1, last ? fl.b : fl.a); x0 = x; last = c; }
+    }
+  }
+  R(0, gy, LOW_W, 1, fl.edge);
+  DECO.duck(234, 168);
+
+  const tw = TITLE_TOWEL, rx = 12;                                        // towel rack with a pink towel
+  R(rx, 66, 3, 6, PAL.slate); R(rx + 39, 66, 3, 6, PAL.slate); R(rx, 67, 42, 2, PAL.silver); R(rx, 67, 42, 1, PAL.white);
+  R(rx + 5, 68, 32, 30, tw.edge); R(rx + 6, 69, 30, 28, tw.body);
+  R(rx + 6, 69, 30, 3, tw.light); R(rx + 6, 84, 30, 2, tw.band); R(rx + 6, 89, 30, 2, tw.band); R(rx + 6, 95, 30, 2, tw.band);
+  for (let x = rx + 7; x < rx + 36; x += 3) R(x, 98, 1, 2, tw.edge);    // fringe
+
+  R(222, 98, 32, 3, ce.band); R(222, 98, 32, 1, ce.light); R(225, 101, 2, 4, PAL.slate); R(249, 101, 2, 4, PAL.slate);   // shelf
+  DECO.lotion(231, 98); DECO.bottle(243, 98);
+
+  const mx = 262, my = 8;                                                 // round-cornered mirror over the sink
+  rr(mx - 1, my - 1, 42, 44, PAL.slate); rr(mx, my, 40, 42, PAL.silver); rr(mx + 2, my + 2, 36, 38, '#cfe0f7');
+  for (let i = 0; i < 10; i++) { R(mx + 8 + i, my + 22 - i, 2, 1, PAL.white); R(mx + 16 + i, my + 30 - i, 1, 1, PAL.white); }
+}
 
 function drawTitleScene(t) {
-  const gy = LOW_H - 30;                                                  // top of the floor
-  R(0, 0, LOW_W, 100, TITLE_SKY[0]);
-  R(0, 100, LOW_W, gy - 100, TITLE_SKY[1]);
-  R(0, 100, LOW_W, 1, TITLE_SKY[2]); R(0, 103, LOW_W, 1, TITLE_SKY[0]); R(0, gy - 12, LOW_W, 1, TITLE_SKY[3]);
-  DECO.window(34, 92, { w: 44, h: 50, bg: TITLE_SKY });
-  [[96, 14], [262, 10], [300, 52], [16, 104], [222, 66]].forEach(function (p, i) {   // a few twinkles
-    R(p[0], p[1], 2, 2, PAL.cream);
-    if (Math.floor(t * 0.8 + i * 0.4) % 3 === 0) { R(p[0] - 1, p[1], 4, 2, PAL.cream); R(p[0], p[1] - 1, 2, 4, PAL.cream); R(p[0], p[1], 2, 2, PAL.white); }
+  const gy = TITLE_GY;
+  L.drawImage(spriteOf('title-backdrop', LOW_W, LOW_H, paintTitleBackdrop), 0, 0);
+  DECO.window(34, 58, { w: 40, h: 46, bg: [TITLE_WALL[2], TITLE_WALL[1], TITLE_TILE.light] });   // night window, twinkling
+  TITLE_BUBBLES.forEach(function (b, i) {                                 // bubbles drifting up from the bin and the sink
+    const y = Math.round(LOW_H + 8 - ((t * b[1] + b[3] * 190) % 190));
+    bubble(Math.round(b[0] + Math.sin(t * 1.3 + i * 2) * 3), y, b[2]);
   });
-  const fl = TITLE_FLOOR;                                                 // the floor, like soft ground
-  R(0, gy, LOW_W, LOW_H - gy, fl.edge);
-  R(0, gy + 1, LOW_W, LOW_H - gy - 1, fl.body); R(0, gy + 14, LOW_W, 2, fl.band);
-  R(0, gy + 1, LOW_W, 1, fl.light); R(0, gy + 2, LOW_W, 2, fl.cap); R(0, gy + 4, LOW_W, 1, fl.band);
 
   // the dustbin, with our soap peeking out and glaring at the pump soap
   const pl = TITLE_BIN, bx = 22, peek = Math.round(Math.sin(t * 2) * 1.5), look = Math.floor(t) % 4 === 0 ? 0 : 1;
@@ -99,18 +167,99 @@ function drawTitleScene(t) {
   R(sx + 17, gy - 23, 20, 24, ce.edge); R(sx + 18, gy - 22, 18, 23, ce.body); R(sx + 18, gy - 22, 1, 23, ce.light);
   rr(sx, gy - 35, 54, 13, ce.edge); rr(sx + 1, gy - 34, 52, 11, ce.body); R(sx + 3, gy - 34, 48, 1, ce.light);
   drawPumpSprite(sx + 15, gy - 75, Math.floor(t * 2) % 6 === 0 ? 'talk' : 'smug');
-  drawBubble(TITLE_TAUNTS[Math.floor(t / 3.5) % TITLE_TAUNTS.length], sx + 27, gy - 74);
+}
+
+// The logo sits on a cloud of lather, with a ribbon under it.
+function drawFoam(cx, cy, t) {
+  const f = TITLE_FOAM, P = TITLE_FOAM_PUFFS;
+  const bob = function (i) { return Math.round(Math.sin(t * 1.4 + i) * 0.8); };
+  P.forEach(function (p, i) { disc(cx + p[0], cy + p[1] + bob(i), p[2] + 1, f.edge); });
+  P.forEach(function (p, i) { disc(cx + p[0], cy + p[1] + bob(i), p[2], f.shade); });
+  P.forEach(function (p, i) { disc(cx + p[0] - 1, cy + p[1] + bob(i) - 2, p[2] - 2, f.body); });
+  P.forEach(function (p, i) { if (i % 2 === 0) R(cx + p[0] - Math.round(p[2] / 2), cy + p[1] + bob(i) - Math.round(p[2] / 2), 3, 2, f.light); });
+}
+
+function drawRibbon(text, cx, y) {
+  const w = textWidth(text, 1) + 16, h = 13, x = Math.round(cx - w / 2);
+  for (let side = 0; side < 2; side++) {                                  // tails tucked behind, with a notch
+    const tx = side ? x + w - 6 : x - 12;
+    for (let r = 0; r < h; r++) {
+      const cut = Math.max(0, 3 - Math.abs(r - 6)), tw = 18 - cut, lx = side ? tx : tx + cut;
+      R(lx, y + 4 + r, tw, 1, r === 0 || r === h - 1 ? PAL.deepplum : PAL.crimson);
+      R(side ? lx + tw - 1 : lx, y + 4 + r, 1, 1, PAL.deepplum);
+    }
+    R(side ? x + w - 6 : x, y + h, 6, 4, PAL.deepplum);                    // the fold
+  }
+  R(x, y, w, h, PAL.deepplum); R(x + 1, y + 1, w - 2, h - 2, PAL.coral); R(x + 1, y + 1, w - 2, 1, PAL.salmon);
+  R(x + 1, y + h - 2, w - 2, 1, PAL.crimson);
+  drawTextC(text, cx, y + 3, 1, PAL.white, true);
+}
+
+// Text with a 1 px outline all round and a drop shadow, like the menu on a big game's title screen.
+function drawOutlinedC(text, cx, y, size, color) {
+  drawTextC(text, cx, y + 2, size, PAL.deepplum, true);
+  [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (o) { drawTextC(text, cx + o[0], y + o[1], size, PAL.ink, true); });
+  drawTextC(text, cx, y, size, color, true);
+}
+
+function drawMenu(t) {
+  TITLE_ITEMS.forEach(function (it, i) {
+    const r = it.r, sel = TITLE.sel === i, cx = r.x + r.w / 2, ty = r.y + 2;
+    drawOutlinedC(it.text, cx, ty, 2, sel ? PAL.yellow : PAL.white);
+    if (!sel) return;
+    const k = Math.round(Math.sin(t * 6) * 1.5), half = textWidth(it.text, 2) / 2;   // little soap bars point at it
+    [-1, 1].forEach(function (d) {
+      const bx = Math.round(cx + d * (half + 9 + k)) - 4, by = ty + 4;
+      rr(bx - 1, by - 1, 10, 8, PAL.ink); rr(bx, by, 8, 6, PAL.pink); R(bx + 2, by + 1, 2, 1, PAL.white);
+    });
+  });
+}
+
+function drawCredits(input) {
+  L.globalAlpha = 0.6; R(0, 0, LOW_W, LOW_H, PAL.ink); L.globalAlpha = 1;
+  const c = CREDITS_CARD;
+  card(c);
+  drawTextC('CREDITS', LOW_W / 2, c.y + 8, 2, PAL.yellow);
+  CREDITS.forEach(function (row, i) {
+    const y = c.y + 32 + i * 20;
+    drawTextC(row[0], LOW_W / 2, y, 1, PAL.sky, true);
+    drawTextC(row[1], LOW_W / 2, y + 9, 1, PAL.white, true);
+  });
+  drawTextC('SUTD WINTER GAME JAM 2026', LOW_W / 2, c.y + c.h - 12, 1, PAL.slate, true);
+  drawButton(CREDITS_BACK_BTN, 'BACK', 1, hovering(input, CREDITS_BACK_BTN));
+}
+
+// Keys on the title screen. Returns true if it used the key.
+function titleKey(k) {
+  if (TITLE.credits) {
+    if (k === 'escape' || k === 'enter' || k === ' ' || k === 'backspace') { TITLE.credits = false; playSound('click'); }
+    return true;
+  }
+  const n = TITLE_ITEMS.length;
+  if (k === 'arrowup') { TITLE.sel = (TITLE.sel + n - 1) % n; return true; }
+  if (k === 'arrowdown') { TITLE.sel = (TITLE.sel + 1) % n; return true; }
+  if (k === 'enter' || k === ' ') { playSound('click'); TITLE_ITEMS[TITLE.sel].go(); return true; }
+  return false;
+}
+
+// A click on the title screen (p in virtual screen px). Any click closes the credits.
+function titleClick(p) {
+  if (TITLE.credits) { playSound('click'); TITLE.credits = false; return; }
+  TITLE_ITEMS.forEach(function (it, i) { if (inButton(p, it.r)) { TITLE.sel = i; playSound('click'); it.go(); } });
 }
 
 function drawTitle(game, input) {
   const t = now();
   const art = IMAGES.title;
   if (art) L.drawImage(art, 0, 0); else drawTitleScene(t);
-  drawLogo('SOAPPIAN', LOW_W / 2, 22, 4, t);
-  drawButton(START_BTN, 'START', 2, hovering(input, START_BTN));
-  if (Math.floor(t * 1.5) % 2 === 0) { drawText('>', START_BTN.x - 9, START_BTN.y + 6, 1, PAL.cream); drawText('<', START_BTN.x + START_BTN.w + 4, START_BTN.y + 6, 1, PAL.cream); }
-  drawTextC('DRAG. SQUEEZE. SLIDE. CLIMB.', LOW_W / 2, 106, 1, PAL.white);
-  drawTextC('SUTD WINTER GAME JAM 2026', LOW_W / 2, LOW_H - 16, 1, TITLE_FLOOR.edge, true);
+  drawFoam(LOW_W / 2, 26, t);
+  drawLogo('SOAPPIAN', LOW_W / 2, 12, 4, t);
+  drawRibbon('DRAG. SQUEEZE. SLIDE. CLIMB.', LOW_W / 2, 45);
+  if (!TITLE.credits) TITLE_ITEMS.forEach(function (it, i) { if (hovering(input, it.r)) TITLE.sel = i; });
+  drawMenu(t);
+  drawBubble(TITLE_TAUNTS[Math.floor(t / 3.5) % TITLE_TAUNTS.length], LOW_W - 39, TITLE_GY - 74);
+  drawTextC('SUTD WINTER GAME JAM 2026', LOW_W / 2, LOW_H - 10, 1, TITLE_FLOOR.edge, true);
+  if (TITLE.credits) drawCredits(input);
   drawSoundButton(TITLE_SOUND_BTN);
 }
 

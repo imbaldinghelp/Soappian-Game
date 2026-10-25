@@ -140,6 +140,13 @@ const SYNTH = {
     tone('square', 260 + 80 * Math.random(), 140, 0.09, 0.08 + 0.14 * p);
     hiss('lowpass', 700, 1, 0.06, 0.2 + 0.2 * p);
   },
+  boom: function () {                                    // the bin blows up: thump, roar, rattling bits, then a party horn
+    tone('sine', 110, 30, 0.9, 0.9);
+    hiss('lowpass', 1800, 1, 0.5, 0.9, 0, 120);
+    hiss('lowpass', 500, 1, 0.45, 0.6, 0.3, 80);
+    [0.15, 0.27, 0.36, 0.5].forEach(function (d) { hiss('bandpass', 2500 + Math.random() * 1500, 4, 0.05, 0.2, d); });
+    tone('sawtooth', 392, 415, 0.25, 0.05, 0.75); tone('sawtooth', 523, 554, 0.45, 0.06, 1.0);   // toot toot
+  },
   clang: function () {
     [330, 513, 789, 1121].forEach(function (f) { tone('triangle', f, f * 0.98, 0.7, 0.12); });
     hiss('lowpass', 900, 1, 0.12, 0.4);

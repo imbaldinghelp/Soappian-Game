@@ -1,11 +1,10 @@
 // config.js - every tunable number lives here. Edit, refresh the page, play.
 
 // ---- Screen and look ----
-// The game is drawn on a small 320 x 180 pixel grid (the canvas itself) and shown 4x (1280 x 720) with
-// hard pixel edges, or a smaller whole step (3x, 2x) if the window is smaller. All art is drawn for 320 x 180.
+// The game is drawn on a small 320 x 180 pixel grid and blown up to fill the window (keeping 16:9) with
+// hard pixel edges. All art is drawn for 320 x 180.
 const VIEW_W = 1280, VIEW_H = 720;        // virtual screen for input: drag lengths below are in these px
 const LOW_W = 320, LOW_H = 180;           // the pixel grid the game is drawn on
-const SCALE = 4;                          // how big the grid is shown (4 = 1280 x 720)
 const PIXEL = 6;                          // world px per art pixel (sprite sizes are fixed in art pixels)
 const VIEW_WORLD_W = LOW_W * PIXEL;       // how much of the world you see (1920 x 1080)
 const VIEW_WORLD_H = LOW_H * PIXEL;
@@ -98,7 +97,13 @@ const RAG_SPIN = 9;                       // spin it is flung with (turns per se
 const RAG_BOUNCE = 0.55;                  // how bouncy the pump soap is
 const RAG_GRAVITY = 3040;                 // px/s^2
 const RAG_HUG_DRAG = 8;                   // once it touches the level's edge, how fast its sideways speed dies (it drops down the side)
-const WIN_WATCH = 4.5;                    // seconds of watching it tumble (the camera follows it down) before the win panel
+const RAG_FREE = 0.45;                    // seconds it tumbles freely off the sink, then it drops (in front of the level) into the bin
+const RAG_FALL_MAX = 4200;                // top speed of that drop (px/s), so the camera keeps up
+const BOOM_UP = 2400;                     // it lands in the bin and the bin explodes: how hard it is blown back up (px/s). Its head pops off
+const BOOM_DEBRIS_SPEED = 1800;           // how hard the bin's pieces fly (px/s)
+const BOOM_FLASH = 0.12;                  // seconds the screen flashes white when the bin goes off
+const BOOM_WATCH = 2.8;                   // seconds of watching the wreckage (the camera follows it) before the win panel
+const WIN_WATCH = 12;                     // the win panel comes up by this many seconds after the hit, whatever happens
 
 // ---- Pump soap taunts (one is picked after each fall; the pixel font is capitals only) ----
 const TAUNTS = [
@@ -121,6 +126,14 @@ const INTRO_FALL_G = 3400;                // fall gravity (px/s^2)
 const INTRO_FALL_MAX = 4200;              // top fall speed (px/s)
 const INTRO_AFTER = 2.4;                  // time in the bin before play starts
 const INTRO_LINES = ['Out of my sink, bar.', 'Enjoy the bin!', 'Climb back to the sink.'];
+
+// ---- Credits (title screen, CREDITS). [what, who], capitals only ----
+const CREDITS = [
+  ['MUSIC', 'AARON'],
+  ['SOUND', 'AARON'],
+  ['TEXTURES', 'DARYL'],
+  ['GAME DESIGN', 'BRIAN'],
+];
 
 // ---- Sound ----
 // The team's recordings (jam rules: no AI audio). A sound with no file here plays its synthesised

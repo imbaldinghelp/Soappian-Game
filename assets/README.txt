@@ -1,6 +1,6 @@
 The PNGs live in texture/ (listed in ART in js/config.js, USE_ART is on).
 Transparent PNGs, lowercase names, exact sizes. Missing files fall back to flat shapes.
-The game is 8-bit: it draws on a 320 x 180 pixel grid, shown 4x (1280 x 720). Sizes below are in art pixels.
+The game is 8-bit: it draws on a 320 x 180 pixel grid, blown up to fill the window. Sizes below are in art pixels.
 The look is soft and gentle: use the pastel colours in PAL and SURFACES (js/config.js), coloured
 outlines rather than black, calm backgrounds. No anti-aliasing, no blur.
 
@@ -21,7 +21,7 @@ bg_floor.png
 bg_toilet.png
 bg_towel.png
 bg_sink.png
-title.png          320 x 180   title screen backdrop (the logo and START button are drawn on top)
+title.png          320 x 180   title screen backdrop (the logo and menu are drawn on top)
 
 Music: Soappian_BGM.mp3 in audio/ (MUSIC_FILE in js/config.js) loops for the whole game. Volume is MUSIC_VOLUME.
 

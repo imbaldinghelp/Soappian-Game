@@ -1,5 +1,5 @@
 // draw.js - the world, drawn in soft 8-bit style. The game is drawn straight onto the page canvas at
-// LOW_W x LOW_H (320 x 180) pixels, and main.js shows it SCALE times bigger with hard pixel edges. Flat pixel shapes by default; set USE_ART
+// LOW_W x LOW_H (320 x 180) pixels, and main.js stretches it to fill the window with hard pixel edges. Flat pixel shapes by default; set USE_ART
 // in config.js to use Aaron's PNGs from the assets folder (missing files fall back to shapes).
 // Menus, HUD and the intro live in screens.js; this file draws the level, the soap, the pump and effects.
 
@@ -68,6 +68,9 @@ function rr(x, y, w, h, c) {                                                  //
   L.fillRect(x, y + 2, w, h - 4);
   L.fillRect(x + 1, y + h - 2, w - 2, 1);
   L.fillRect(x + 2, y + h - 1, w - 4, 1);
+}
+function disc(x, y, r, c) {                                                   // filled pixel circle
+  for (let dy = -r; dy <= r; dy++) { const hw = Math.round(Math.sqrt(r * r - dy * dy)); R(x - hw, y + dy, hw * 2 + 1, 1, c); }
 }
 function now() { return performance.now() / 1000; }
 
@@ -479,6 +482,72 @@ function drawPump(game) {
   drawPumpSprite(x, y, game.pumpMood);                                    // pumpMood is set by the intro
 }
 
+// ---------- the bin blowing up (binBoom in soap.js) ----------
+// The bin's pieces, cut from the same plastic. Sizes match BIN_DEBRIS in soap.js.
+const DEBRIS_PAINT = {
+  wall: function (w, h) {                                // a chunk of wall, broken along the top
+    const P = SURFACES.plastic;
+    R(0, 0, w, h, P.edge); R(1, 0, w - 2, h - 1, P.body); R(1, 0, 2, h - 1, P.light);
+    for (let i = 5; i < w - 2; i += 4) R(i, 3, 1, h - 6, P.band);
+    L.clearRect(4, 0, 3, 2); L.clearRect(10, 0, 4, 3);
+  },
+  lid: function (w, h) {
+    const P = SURFACES.plastic;
+    rr(0, 0, w, h, P.edge); rr(1, 1, w - 2, h - 2, P.band); R(3, 2, w - 6, 1, P.cap);
+    R(Math.round(w / 2) - 6, 3, 12, 2, P.edge); R(Math.round(w / 2) - 5, 3, 10, 1, P.light);   // handle
+  },
+  rim: function (w, h) {
+    const P = SURFACES.plastic;
+    R(0, 0, w, h, P.edge); R(1, 1, w - 2, h - 2, P.cap); R(1, 1, w - 2, 1, P.light); R(1, h - 2, w - 2, 1, P.band);
+    L.clearRect(w - 4, 0, 4, 2);
+  },
+  paper: function (w, h) { rr(0, 0, w, h, PAL.silver); rr(1, 1, w - 2, h - 2, PAL.white); R(3, 2, 3, 1, PAL.silver); R(2, 5, 4, 1, PAL.silver); },
+  peel: function (w) {
+    R(0, 1, w, 3, PAL.yellow); R(0, 0, 2, 2, PAL.yellow); R(w - 2, 0, 2, 2, PAL.yellow);
+    R(0, 3, w, 1, PAL.orange); R(Math.round(w / 2) - 1, 4, 2, 1, PAL.brown);
+  },
+  pedal: function (w, h) { R(0, 0, w, h, SURFACES.plastic.edge); R(1, 1, w - 2, h - 2, PAL.silver); R(1, 1, w - 2, 1, PAL.white); },
+};
+
+function drawDebris(game) {
+  if (!game.boom) return;
+  const cx = px(game.boom.x), cy = px(game.boom.y);
+  R(cx - 30, cy - 1, 60, 1, PAL.deepplum); R(cx - 20, cy - 2, 40, 1, PAL.deepplum);   // scorch mark where the bin stood
+  for (const d of game.boom.debris) {
+    const w = px(d.w), h = px(d.h);
+    const c = spriteOf('debris-' + d.kind, w, h, function () { DEBRIS_PAINT[d.kind](w, h); });
+    L.save();
+    L.translate(px(d.x), px(d.y));
+    L.rotate(d.a);
+    L.drawImage(c, -Math.round(w / 2), -Math.round(h / 2));
+    L.restore();
+  }
+}
+
+// A cartoon blast: puffs that swell fast (white, then fire, then smoke), drift up and shrink away, and a KABOOM.
+const BOOM_PUFFS = [[0, -6, 1], [-14, -2, 0.8], [14, -3, 0.85], [-8, -16, 0.9], [9, -15, 0.8], [-22, -10, 0.6],
+  [22, -11, 0.65], [0, -26, 0.7], [-18, -22, 0.5], [18, -24, 0.55]];
+function drawBoom(game) {
+  const bm = game.boom;
+  if (!bm) return;
+  const t = bm.t, cx = px(bm.x), cy = px(bm.y);
+  if (t < 1.6) {
+    const grow = 1 - Math.pow(1 - Math.min(1, t / 0.25), 3), fade = t < 0.5 ? 1 : Math.max(0, 1 - (t - 0.5) / 1.1);
+    const edge = t < 0.1 ? PAL.white : t < 0.4 ? PAL.tangerine : PAL.lilac;
+    const fill = t < 0.1 ? PAL.white : t < 0.4 ? PAL.yellow : PAL.silver;
+    const puff = BOOM_PUFFS.map(function (p, i) {
+      const spread = 0.6 + grow * 0.9, rise = Math.round(t * 20 * (1 + (i % 3) * 0.4));
+      return { x: cx + Math.round(p[0] * spread), y: cy - 4 + Math.round(p[1] * spread) - rise, r: Math.round((6 + 12 * p[2]) * grow * fade) };
+    });
+    puff.forEach(function (p) { if (p.r > 0) disc(p.x, p.y, p.r + 1, edge); });
+    puff.forEach(function (p) { if (p.r > 2) disc(p.x - 1, p.y - 1, p.r - 2, fill); });
+  }
+  if (t > 0.05 && t < 1.9 && (t < 1.5 || Math.floor(t * 12) % 2)) {   // KABOOM pops in, shakes, blinks out
+    const pop = t < 0.2 ? Math.round((1 - t / 0.2) * 14) : 0, jig = t < 0.7 ? Math.round(Math.sin(t * 45)) : 0;
+    drawOutlinedC('KABOOM!', Math.max(cx, 66) + jig, cy - 66 + pop, 3, PAL.yellow);
+  }
+}
+
 // ---------- the soap ----------
 // The soap's look after falls is switched off for now (DIRT_LOOK in config.js).
 function shownDirt(game) { return DIRT_LOOK ? dirtOf(game) : 0; }
@@ -543,7 +612,8 @@ function drawSoap(game, aim) {
 // ---------- effects: particles in world px, and screen shake ----------
 const FX = { parts: [], shake: 0, trailT: 0, wind: 0 };   // wind: 0 to 1, how hard the soap is free falling
 
-// kind: 'bubble' (floats up), 'dust' (puffs out), 'drop' (splashes and falls), 'spark' (twinkles in place)
+// kind: 'bubble' (floats up), 'dust' (puffs out), 'drop' (splashes and falls), 'spark' (twinkles in place),
+// 'confetti' (shoots up, flutters down)
 function fxBurst(kind, x, y, n, color) {
   for (let i = 0; i < n && FX.parts.length < 300; i++) {
     const a = Math.random() * Math.PI * 2, sp = Math.random();
@@ -551,6 +621,7 @@ function fxBurst(kind, x, y, n, color) {
     if (kind === 'bubble') { p.x += (Math.random() - 0.5) * 60; p.vx = (Math.random() - 0.5) * 60; p.vy = -60 - sp * 100; p.life = 0.7 + sp * 0.8; p.big = Math.random() < 0.4; }
     else if (kind === 'dust') { p.vx = (Math.random() - 0.5) * 360; p.vy = -40 - sp * 80; p.life = 0.3 + sp * 0.3; }
     else if (kind === 'drop') { p.vx = (Math.random() - 0.5) * 300; p.vy = -200 - sp * 250; p.life = 0.6; }
+    else if (kind === 'confetti') { p.vx = (Math.random() - 0.5) * 1800; p.vy = -900 - sp * 1600; p.life = 2.2 + sp * 1.5; p.seed = Math.random() * 9; }
     else { p.x += Math.cos(a) * sp * 40; p.y += Math.sin(a) * sp * 40; p.life = 0.4 + sp * 0.5; }
     FX.parts.push(p);
   }
@@ -569,6 +640,7 @@ function fxUpdate(game, dt) {
     if (p.kind === 'drop') p.vy += GRAVITY * 0.6 * dt;
     if (p.kind === 'dust') { p.vx *= Math.exp(-6 * dt); p.vy *= Math.exp(-4 * dt); }
     if (p.kind === 'bubble') p.vx = Math.sin((p.t + i) * 6) * 30;
+    if (p.kind === 'confetti') { p.vy = Math.min(p.vy + GRAVITY * 0.5 * dt, 240); p.vx = p.vx * Math.exp(-2.5 * dt) + Math.sin(p.t * 7 + p.seed) * 25; }
     p.x += p.vx * dt; p.y += p.vy * dt;
   }
   const s = game.soap;                                   // a trail of bubbles behind a fast soap
@@ -589,6 +661,8 @@ function fxDraw() {
       const on = Math.floor(p.t * 12) % 2 === 0;
       R(x, y, 1, 1, PAL.white);
       if (on && k < 0.7) { R(x - 1, y, 3, 1, p.c); R(x, y - 1, 1, 3, p.c); }
+    } else if (p.kind === 'confetti') {
+      if (k < 0.85 || Math.floor(p.t * 20) % 2) { const flip = Math.floor(p.t * 9 + p.seed) % 2; R(x, y, flip ? 2 : 1, flip ? 1 : 2, p.c); }
     } else if (k < 0.8 || Math.floor(p.t * 20) % 2) R(x, y, 1, 1, p.c);
   }
 }
@@ -605,14 +679,17 @@ function drawWorld(game, vx0, vy0, vx1, vy1, aim, camX, camY) {
     const x0 = px(b.x), y0 = px(b.y), x1 = px(b.x + b.w), y1 = px(b.y + b.h);
     if (x1 < vx0 || x0 > vx1 || y1 < vy0 || y0 > vy1) continue;
     if (b.surface === 'wall' && (b.x < 0 || b.x >= WORLD_W || b.y < 0)) continue;   // world edges stay invisible
+    if (b.bin && game.boom) continue;                      // blown up
     drawBlock(b);
   }
   for (const sl of LEVEL.slides) {
     if (px(Math.max(sl.y0, sl.y1)) + 5 < vy0 || px(Math.min(sl.y0, sl.y1)) - 1 > vy1) continue;
     drawSlide(sl);
   }
-  for (const d of LEVEL.decor) if (!BACK_DECO[d.kind]) drawDeco(d, vx0, vy0, vx1, vy1);
+  for (const d of LEVEL.decor) if (!BACK_DECO[d.kind] && !(d.kind === 'bin' && game.boom)) drawDeco(d, vx0, vy0, vx1, vy1);
+  drawDebris(game);
   drawPump(game);
+  drawBoom(game);
   const sp = drawSoap(game, aim);
   fxDraw();
   return sp;
@@ -705,6 +782,9 @@ function drawFrame(game, input, flags) {
     L.translate(-camX, -camY);
     const sp = drawWorld(game, camX, camY, camX + LOW_W, camY + LOW_H, aim, camX, camY);
     L.restore();
+    if (game.boom && game.boom.t < BOOM_FLASH) {           // the bin going off: a white flash
+      L.globalAlpha = 0.85 * (1 - game.boom.t / BOOM_FLASH); R(0, 0, LOW_W, LOW_H, PAL.white); L.globalAlpha = 1;
+    }
 
     const sx = sp.x - camX, sy = sp.y - camY;               // soap on screen, art pixels
     if (game.state === 'play' && game.soap.canAim && !input.aiming && Math.floor(now() * 2.8) % 2 === 0) {

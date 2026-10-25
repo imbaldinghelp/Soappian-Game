@@ -15,6 +15,7 @@ function newGame() {
     taunt: '', tauntT: 0, lastTaunt: -1,
     winT: 0,
     rag: null,                       // the beaten pump soap, tumbling (see knockPump)
+    boom: null,                      // the bin blowing up when the pump soap lands in it (see binBoom)
     events: [],
     cam: { x: 0, y: 0 },
   };
@@ -175,6 +176,7 @@ function knockPump(game) {
                  r: Math.min(w, h) / 2, neck: { x: (pc.neck.x - 12) * PIXEL, y: (pc.neck.y - pc.top) * PIXEL - h / 2 },
                  mass: pc.mass, bonkT: 0 };
   });
+  parts.t = 0;
   game.rag = parts;
 }
 
@@ -183,6 +185,7 @@ function rotated(pt, a) { return { x: pt.x * Math.cos(a) - pt.y * Math.sin(a), y
 // One piece against every solid: push out, bounce, and turn sliding into spin.
 function ragCollide(game, q) {
   for (const b of game.solids) {
+    if (b.bin && game.boom) continue;                           // blown away
     const cx = Math.max(b.x, Math.min(q.x, b.x + b.w)), cy = Math.max(b.y, Math.min(q.y, b.y + b.h));
     let dx = q.x - cx, dy = q.y - cy, d = Math.hypot(dx, dy);
     if (d >= q.r) continue;
@@ -201,31 +204,111 @@ function ragCollide(game, q) {
   }
 }
 
-// Moves the ragdoll by one frame. Runs while the win plays out.
+// Moves the ragdoll by one frame. Runs while the win plays out. After RAG_FREE seconds of tumbling it drops
+// in front of the level (no more collisions), steered into the middle of the bin, and the bin blows up.
 function updateRagdoll(game, dt) {
   const rag = game.rag;
   if (!rag) return;
+  rag.t += dt;
+  if (!rag.drop && !game.boom && rag.t > RAG_FREE) startBinDrop(rag);
   const h = dt / RAG_STEPS, g = RAG_GRAVITY * h * h;
   const hold = rag.hug ? Math.exp(-RAG_HUG_DRAG * h) : 1;      // after touching the level's edge it slides straight down it
   for (let n = 0; n < RAG_STEPS; n++) {
     for (const k of ['bottle', 'head']) {
       const q = rag[k];
-      const vx = (q.x - q.px) * hold, vy = q.y - q.py;
+      const vx = (q.x - q.px) * hold, vy = rag.drop ? Math.min(q.y - q.py, RAG_FALL_MAX * h) : q.y - q.py;
       q.px = q.x; q.py = q.y;
       q.x += vx; q.y += vy + g;
       const va = (q.a - q.pa) * 0.998;
       q.pa = q.a; q.a += va;
       q.bonkT -= h;
-      ragCollide(game, q);
+      if (!rag.drop) ragCollide(game, q);
     }
-    for (let it = 0; it < 3; it++) {                             // the neck joint pulls the two pieces together
-      const A = rag.bottle, B = rag.head;
-      const na = rotated(A.neck, A.a), nb = rotated(B.neck, B.a);
-      const dx = (B.x + nb.x) - (A.x + na.x), dy = (B.y + nb.y) - (A.y + na.y), m = A.mass + B.mass;
-      A.x += dx * B.mass / m; A.y += dy * B.mass / m;
-      B.x -= dx * A.mass / m; B.y -= dy * A.mass / m;
+    if (!rag.broken) {
+      for (let it = 0; it < 3; it++) {                           // the neck joint pulls the two pieces together
+        const A = rag.bottle, B = rag.head;
+        const na = rotated(A.neck, A.a), nb = rotated(B.neck, B.a);
+        const dx = (B.x + nb.x) - (A.x + na.x), dy = (B.y + nb.y) - (A.y + na.y), m = A.mass + B.mass;
+        A.x += dx * B.mass / m; A.y += dy * B.mass / m;
+        B.x -= dx * A.mass / m; B.y -= dy * A.mass / m;
+      }
+      rag.head.a += (rag.bottle.a - rag.head.a) * 0.08;         // the head flops after the bottle
     }
-    rag.head.a += (rag.bottle.a - rag.head.a) * 0.08;           // the head flops after the bottle
+    if (rag.drop) steerToBin(rag);
+  }
+  if (rag.drop && rag.bottle.y + rag.bottle.r >= LEVEL.bin.y) binBoom(game);
+  updateBoom(game, dt);
+}
+
+function startBinDrop(rag) {
+  rag.drop = { x0: rag.bottle.x, y0: rag.bottle.y };
+  rag.hug = false;
+  for (const k of ['bottle', 'head']) rag[k].px = rag[k].x;     // no sideways speed: the steering does the sideways part
+}
+
+// Slides both pieces sideways (keeping their speed) so the bottle is over the bin by the time it gets there.
+function steerToBin(rag) {
+  const A = rag.bottle, d = rag.drop, end = LEVEL.bin.y - A.r;
+  const k = Math.max(0, Math.min(1, (A.y - d.y0) / (end - d.y0))), e = k * k * (3 - 2 * k);
+  const dx = d.x0 + (LEVEL.bin.x - d.x0) * e - A.x;
+  for (const q of [A, rag.head]) { q.x += dx; q.px += dx; }
+}
+
+// The bin blows up: the walls, lid and rubbish fly, the pump soap is thrown back up and its head pops off.
+// Kinds are painted in draw.js. Sizes in art px; at: start in tiles from the middle of the bin floor;
+// v: speed as a share of BOOM_DEBRIS_SPEED; spin in radians per second.
+const BIN_DEBRIS = [
+  { kind: 'wall', w: 16, h: 32, at: [-2.5, -3], v: [-0.8, -1.1], spin: -7 },
+  { kind: 'wall', w: 16, h: 32, at: [-2.5, -1], v: [-0.5, -0.7], spin: 5 },
+  { kind: 'wall', w: 16, h: 32, at: [2.5, -3], v: [0.8, -1.2], spin: 8 },
+  { kind: 'wall', w: 16, h: 32, at: [2.5, -1], v: [0.55, -0.6], spin: -6 },
+  { kind: 'lid', w: 36, h: 10, at: [0, -4.5], v: [0.15, -2.0], spin: 11 },
+  { kind: 'rim', w: 48, h: 6, at: [-1.5, -4], v: [-0.4, -1.5], spin: -9 },
+  { kind: 'rim', w: 48, h: 6, at: [1.5, -4], v: [0.45, -1.4], spin: 10 },
+  { kind: 'paper', w: 10, h: 8, at: [-1.2, -0.5], v: [-0.3, -1.6], spin: 6 },
+  { kind: 'paper', w: 10, h: 8, at: [0.8, -0.5], v: [0.2, -1.9], spin: -8 },
+  { kind: 'peel', w: 10, h: 5, at: [1.2, -0.5], v: [0.35, -1.7], spin: -12 },
+  { kind: 'pedal', w: 9, h: 4, at: [3, -0.3], v: [1.0, -0.9], spin: 15 },
+];
+
+function binBoom(game) {
+  const rag = game.rag, b = LEVEL.bin, h = DT / RAG_STEPS;
+  rag.drop = null; rag.broken = true;
+  game.boom = { t: 0, x: b.x, y: b.y, debris: BIN_DEBRIS.map(function (d) {
+    const jig = 0.85 + Math.random() * 0.3;
+    return { kind: d.kind, w: d.w * PIXEL, h: d.h * PIXEL, x: b.x + d.at[0] * TILE_PX, y: b.y + d.at[1] * TILE_PX,
+             vx: d.v[0] * BOOM_DEBRIS_SPEED * jig, vy: d.v[1] * BOOM_DEBRIS_SPEED * jig, a: 0, va: d.spin, bonkT: 0 };
+  }) };
+  [['bottle', -250, 1, 14], ['head', 500, 1.35, -25]].forEach(function (p) {   // the head goes higher, spinning wildly
+    const q = rag[p[0]], vx = p[1] * (0.7 + Math.random() * 0.6), vy = -BOOM_UP * p[2];
+    q.y = Math.min(q.y, b.y - q.r);
+    q.px = q.x - vx * h; q.py = q.y - vy * h; q.pa = q.a - p[3] * h;
+  });
+  emit(game, 'boom', { x: b.x, y: b.y - TILE_PX });
+}
+
+// The bin's pieces: thrown, spinning, bouncing on the floor until they lie flat.
+function updateBoom(game, dt) {
+  const bm = game.boom;
+  if (!bm) return;
+  bm.t += dt;
+  for (const d of bm.debris) {
+    d.vy += RAG_GRAVITY * dt;
+    d.x += d.vx * dt; d.y += d.vy * dt; d.a += d.va * dt;
+    d.bonkT -= dt;
+    const low = Math.abs(d.w / 2 * Math.sin(d.a)) + Math.abs(d.h / 2 * Math.cos(d.a));   // lowest point below its middle
+    if (d.y + low > LEVEL.bin.y) {
+      d.y = LEVEL.bin.y - low;
+      if (d.vy > 400 && d.bonkT <= 0) { emit(game, 'bonk', { speed: d.vy, x: d.x, y: LEVEL.bin.y }); d.bonkT = 0.15; }
+      d.vy = d.vy > 250 ? -d.vy * 0.35 : 0;
+      d.vx *= 0.7; d.va *= 0.6;
+      if (d.vy === 0) {                                          // resting: tip over onto its long side
+        const flat = d.w >= d.h ? Math.round(d.a / Math.PI) * Math.PI : Math.round((d.a - Math.PI / 2) / Math.PI) * Math.PI + Math.PI / 2;
+        d.a += (flat - d.a) * Math.min(1, 10 * dt); d.vx *= Math.exp(-6 * dt);
+      }
+    }
+    if (d.x < d.w / 2) { d.x = d.w / 2; d.vx = Math.abs(d.vx) * 0.5; }
+    if (d.x > WORLD_W - d.w / 2) { d.x = WORLD_W - d.w / 2; d.vx = -Math.abs(d.vx) * 0.5; }
   }
 }
 

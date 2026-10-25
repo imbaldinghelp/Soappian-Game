@@ -36,9 +36,9 @@ In VS Code you can also use the Live Server extension.
 | `js/soap.js` | The soap: physics, friction, meter, launch, falls and flops, winning, the pump ragdoll. No drawing. Reports events (launch, land, bounce, flop, getup, win, bonk) for sound and effects |
 | `js/audio.js` | Sound effects: synthesised placeholders, or recordings from `assets/` when `USE_SOUND_FILES` is on |
 | `js/draw.js` | The world, soft 8-bit style on a 320x180 pixel grid: pixel font, platforms by surface, wall colours, scenery, pump, soap, particles, aim line, meter |
-| `js/screens.js` | Everything on top of the world: title screen, intro cutscene, HUD, taunts, pause menu, win screen with name entry and leaderboard |
+| `js/screens.js` | Everything on top of the world: title screen (menu, credits), intro cutscene, HUD, taunts, pause menu, win screen with name entry and leaderboard |
 | `js/scores.js` | The leaderboard. Local to this browser for now; swap `loadScores` and `addScore` for an online database later |
-| `js/main.js` | Shows the canvas at 4x, input (mouse, touch, keys), game loop, camera, pause, restart, turns events into sounds and effects |
+| `js/main.js` | Fits the canvas to the window, input (mouse, touch, keys), game loop, camera, pause, restart, turns events into sounds and effects |
 | `tools/check-level.js` | Optional. A bot that checks the level can be beaten (see below) |
 | `assets/` | Put Aaron's PNGs here (see `assets/README.txt`) |
 | `CREDITS.md` | Credits. Add every outside asset the moment it is added |
@@ -52,7 +52,7 @@ Everything in `js/config.js`, in this order of usefulness:
    Falls: `FLOP_TIME`.
 2. Overall slipperiness: `K` (bigger = everything stops sooner).
 3. Pace and shot size: `GRAVITY`, `MIN_SPEED`, `MAX_SPEED`. Speeds x k with gravity x k squared keeps the same arcs, k times faster.
-4. Screen: `LOW_W` / `LOW_H` (the 320x180 pixel grid the art is drawn for) and `SCALE` (4 = 1280x720).
+4. Screen: `LOW_W` / `LOW_H` (the 320x180 pixel grid the art is drawn for) (the canvas is blown up to fill the window, keeping 16:9).
 5. Meter: `RISE_START`, `RISE_ACCEL` (0 = constant speed), `FALL_RATE`. `SHOT_BUFFER`: how long a shot let go in the air waits for a surface. `HOP_MAX`: how high a hard landing hops.
 6. Ricochets: `SIDE_BOUNCE` (how hard every platform side and wall bounces you back).
 7. Intro: `INTRO_*` timings and `INTRO_LINES`. Sound: `SOUND_VOLUME`. Free-fall wind: `WIND_START`, `WIND_FULL`, `WIND_VOLUME`.
@@ -83,7 +83,7 @@ Check the level is still beatable after big edits: `node tools/check-level.js` (
 
 ## Add the art
 
-Art is 8-bit: small PNGs drawn 1:1 on a 320x180 grid shown 4x (soap 16x12, pump 24x40, tiles 16x16, backgrounds and title 320x180).
+Art is 8-bit: small PNGs drawn 1:1 on a 320x180 grid blown up to fill the window (soap 16x12, pump 24x40, tiles 16x16, backgrounds and title 320x180).
 Each material keeps its colour (plastic mint, ceramic white, wet blue, seat butter yellow, towel pink). The look is soft and gentle: pastel colours from `PAL` in `js/config.js`, coloured outlines rather than black, calm backgrounds. Copy the PNGs into `assets/` with the file names in `assets/README.txt`, then set `USE_ART = true`
 in `js/config.js`. Missing files fall back to flat shapes, so art can be added one file at a time.
 
@@ -99,6 +99,6 @@ for harder shots. Tip: record a real soap bottle being squeezed for the jump.
 1. Select the **contents** of this folder (`index.html`, `js`, `assets`, `CREDITS.md`) and zip them,
    so `index.html` is at the top of the zip. Do not zip `tools/` or this file if you want it smaller.
 2. On the jam's itch.io page: Upload files, pick the zip, tick **This file will be played in the browser**.
-3. Set the embed size to 1280 x 720 (an exact 4x, so pixels stay crisp) and tick **Fullscreen button**. Tick mobile friendly if you want phones.
+3. Set the embed size to 1280 x 720 (the game fills whatever size it gets, keeping 16:9) and tick **Fullscreen button**. Tick mobile friendly if you want phones.
 4. Add the other two team members as contributors, list each role in the description.
 5. Test the draft page in a private window before the cutoff.

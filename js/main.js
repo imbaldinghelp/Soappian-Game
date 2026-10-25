@@ -3,11 +3,11 @@
 
 const canvas = document.getElementById('game');                    // its pixel size is set by draw.js
 
-// Show the 320 x 180 grid SCALE times bigger (1280 x 720), or the biggest whole step that fits the window,
-// so every art pixel stays the same size. Only a window smaller than the grid gets an uneven scale.
+// Fill the window, keeping 16:9. The 320 x 180 canvas is stretched by CSS with hard pixel edges, so a scale that
+// is not a whole number makes some art pixels one screen pixel wider than others. Do not copy it onto a big
+// full-screen canvas instead: on integrated graphics at 144 Hz that drops about 1 frame in 12 (tested).
 function fitCanvas() {
-  const fit = Math.min(window.innerWidth / LOW_W, window.innerHeight / LOW_H);
-  const k = fit >= 1 ? Math.min(SCALE, Math.floor(fit)) : fit;
+  const k = Math.min(window.innerWidth / LOW_W, window.innerHeight / LOW_H);
   canvas.style.width = Math.floor(LOW_W * k) + 'px';
   canvas.style.height = Math.floor(LOW_H * k) + 'px';
 }
@@ -54,6 +54,7 @@ function playIntro() {
 
 function backToTitle() {
   game = newGame();
+  TITLE.credits = false;
   input.aiming = false; input.queued = null;
   FX.parts.length = 0;
   snapCamera();
@@ -93,7 +94,7 @@ canvas.addEventListener('pointerdown', function (e) {
   }
   if (game.state === 'title') {
     if (inButton(p, TITLE_SOUND_BTN)) { toggleMute(); playSound('click'); return; }
-    if (inButton(p, START_BTN)) { playSound('click'); playIntro(); }
+    titleClick(p);
     return;
   }
   if (game.state === 'intro') { startGame(); return; }                // click skips the cutscene
@@ -169,7 +170,7 @@ window.addEventListener('keydown', function (e) {
   const k = e.key.toLowerCase();
   unlockAudio();
   if (game.state === 'won') { winKey(game, e.key); return; }        // typing a name for the leaderboard
-  if (game.state === 'title' && (k === 'enter' || k === ' ')) { playIntro(); return; }
+  if (game.state === 'title' && titleKey(k)) return;                 // menu and credits
   if (game.state === 'intro' && (k === 'enter' || k === ' ' || k === 'escape')) { startGame(); return; }
   if (k === 'escape') {                                              // Esc opens and closes the menu
     if (game.state === 'play') pauseGame(); else if (game.state === 'paused') resumeGame();
@@ -215,6 +216,13 @@ function handleEvents() {
     } else if (ev.type === 'getup') {                                // back on its feet
       playSound('jump', 0);
       fxBurst('bubble', d.x, d.y, 4, PAL.white);
+    } else if (ev.type === 'boom') {                                // the pump soap lands in the bin and the bin explodes
+      playSound('boom');
+      fxShake(0.9);
+      fxBurst('spark', d.x, d.y, 30, PAL.yellow);
+      fxBurst('dust', d.x, d.y, 30, PAL.silver);
+      fxBurst('bubble', d.x, d.y, 40, PAL.white);
+      [PAL.pink, PAL.sky, PAL.lime, PAL.yellow, PAL.coral].forEach(function (c) { fxBurst('confetti', d.x, d.y, 16, c); });
     } else if (ev.type === 'win') {
       playSound('win');
       fxBurst('spark', game.pump.x + game.pump.w / 2, game.pump.y + game.pump.h / 2, 16, PAL.yellow);
@@ -249,7 +257,7 @@ function update(dt) {
   if (game.state === 'winning' || game.state === 'won') updateRagdoll(game, dt);   // the pump soap tumbles on
   if (game.state === 'winning') {
     game.winT += dt;
-    if (game.winT > WIN_WATCH) { game.state = 'won'; input.aiming = false; openWinScreen(game); }
+    if ((game.boom && game.boom.t > BOOM_WATCH) || game.winT > WIN_WATCH) { game.state = 'won'; input.aiming = false; openWinScreen(game); }
   }
   handleEvents();
   fxUpdate(game, dt);
